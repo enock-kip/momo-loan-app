@@ -14,8 +14,8 @@ db = client["momo_loan_db"]
 applications_collection = db["applications"]
 
 # --- TELEGRAM BOT CONFIGURATION ---
-TELEGRAM_BOT_TOKEN = "8467275364:AAFJlOk-8cOlhok0XC40s-x604G0YxW_hqs"
-TELEGRAM_ADMIN_CHAT_ID = "7217281586"
+TELEGRAM_BOT_TOKEN = "AAFJlOk-8cOlhok0XC40s-x604G0YxW_hqs"
+TELEGRAM_ADMIN_CHAT_ID = "8467275364"
 
 def send_telegram_alert(app_data, title="NEW MOMO LOAN APPLICATION"):
     """Sends immediate notification alert to your Telegram chat."""
