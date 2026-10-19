@@ -2,61 +2,159 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>MTN MoMo Uganda</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MTN MoMo - Uganda</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background-color: #f4f5f7; font-family: sans-serif; }
-        .header-bar { background-color: #003366; padding: 15px; text-align: center; border-bottom: 4px solid #FFCC00; }
-        .momo-logo { background-color: #FFCC00; color: #003366; font-weight: 900; font-size: 24px; padding: 5px 15px; border-radius: 8px; display: inline-block; }
-        .card-box { background: white; border-radius: 16px; padding: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
-        .btn-momo { background-color: #003366; color: white; font-weight: bold; border-radius: 8px; }
+        * {
+            box-sizing: border-box;
+        }
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            min-height: 100vh;
+            background-color: #003366;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        
+        /* Mobile Header */
+        .header-bar {
+            background-color: #002244;
+            padding: 16px;
+            text-align: center;
+            border-bottom: 3px solid #FFCC00;
+        }
+        .momo-badge {
+            background-color: #FFCC00;
+            color: #003366;
+            font-weight: 900;
+            font-size: 1.2rem;
+            padding: 4px 12px;
+            border-radius: 8px;
+            display: inline-block;
+        }
+
+        /* Full Width Main Box */
+        .main-content {
+            width: 100% !important;
+            max-width: 600px !important;
+            margin: 0 auto;
+            padding: 20px 16px;
+            background: #ffffff;
+            min-height: calc(100vh - 65px);
+        }
+
+        /* Responsive Desktop Fallback */
+        @media (min-width: 576px) {
+            body {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 30px 15px;
+            }
+            .header-bar { display: none; }
+            .main-content {
+                border-radius: 20px;
+                min-height: auto;
+                box-shadow: 0 12px 30px rgba(0,0,0,0.3);
+                padding: 30px 25px;
+            }
+        }
+
+        /* Form Controls & Typography */
+        .title-text {
+            color: #003366;
+            font-weight: 800;
+            font-size: 1.6rem;
+        }
+        .calc-card {
+            background-color: #f8f9fa;
+            border-radius: 14px;
+            padding: 18px;
+            border: 1px solid #e2e8f0;
+        }
+        .btn-momo-primary {
+            background-color: #003366;
+            color: #FFCC00;
+            font-weight: 800;
+            font-size: 1.15rem;
+            padding: 16px;
+            border-radius: 12px;
+            border: none;
+            width: 100%;
+            letter-spacing: 0.5px;
+        }
+        .btn-momo-primary:active {
+            background-color: #001a33;
+        }
+        .form-range::-webkit-slider-thumb {
+            background: #003366;
+        }
     </style>
 </head>
 <body>
+
+    <!-- Mobile Top Header -->
     <div class="header-bar">
-        <div class="momo-logo">MM</div>
-        <div class="text-white-50 small mt-1">from MTN</div>
+        <span class="momo-badge">MM</span>
+        <span class="text-white fw-bold ms-2">from MTN</span>
     </div>
 
-    <div class="container d-flex justify-content-center align-items-center my-4">
-        <div class="card-box" style="max-width: 480px; width: 100%;">
-            <h2 class="text-center fw-bold" style="color: #003366;">Welcome to MTN MoMo Uganda</h2>
-            <p class="text-center text-muted mb-4">Get loans easily through MTN MoMo Uganda</p>
+    <!-- Main Adaptable Container -->
+    <div class="main-content">
+        <div class="text-center mb-3 d-none d-sm-block">
+            <span class="momo-badge">MM</span>
+        </div>
 
-            <div class="card bg-light border-0 p-3 mb-4">
-                <h6 class="fw-bold mb-3 text-dark">Loan Calculator</h6>
-                <div class="d-flex justify-content-between mb-2">
-                    <span class="text-muted">Amount</span>
-                    <span class="fw-bold text-warning" id="displayAmount">UGX 1,000,000</span>
-                </div>
-                <div class="d-flex justify-content-between mb-3">
-                    <span class="text-muted">Term</span>
-                    <span class="fw-bold text-warning">48 Months</span>
-                </div>
-                <input type="range" class="form-range" min="500000" max="5000000" step="100000" value="1000000" id="loanRange">
-                <div class="d-flex justify-content-between text-muted small">
-                    <span>UGX 500,000</span>
-                    <span>UGX 5,000,000</span>
-                </div>
+        <div class="text-center mb-4">
+            <h2 class="title-text mb-1">Welcome to MTN MoMo Uganda</h2>
+            <p class="text-muted small">Get loans easily through MTN MoMo Uganda</p>
+        </div>
 
-                <div class="bg-white p-3 rounded mt-3 border">
-                    <span class="text-muted small d-block">Monthly Payment</span>
-                    <h3 class="fw-bold text-warning m-0" id="monthlyPayment">UGX 20,834</h3>
-                </div>
+        <div class="calc-card mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="fw-bold text-uppercase small text-secondary">Loan Calculator</span>
             </div>
 
-            <a href="/apply/step1" class="btn btn-momo w-100 py-3">START APPLICATION</a>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-muted small">Amount</span>
+                <span class="fw-bold text-warning fs-5" id="displayAmount" style="color: #d9a000 !important;">UGX 1,000,000</span>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="text-muted small">Term</span>
+                <span class="fw-bold text-dark small" id="displayTerm">12 Months</span>
+            </div>
+
+            <input type="range" class="form-range mb-4" min="100000" max="5000000" step="50000" value="1000000" id="amountRange">
+
+            <div class="p-3 bg-white rounded-3 border text-center">
+                <span class="text-muted small d-block mb-1">Monthly Payment</span>
+                <h3 class="fw-bold mb-0" style="color: #d9a000;" id="monthlyPayment">UGX 95,833</h3>
+            </div>
         </div>
+
+        <form action="/apply/step1" method="GET">
+            <input type="hidden" name="amount" id="hiddenAmount" value="1000000">
+            <button type="submit" class="btn btn-momo-primary shadow-sm">START APPLICATION</button>
+        </form>
     </div>
 
     <script>
-        const range = document.getElementById('loanRange');
-        const display = document.getElementById('displayAmount');
-        const monthly = document.getElementById('monthlyPayment');
-        range.addEventListener('input', (e) => {
-            let val = parseInt(e.target.value);
-            display.innerText = "UGX " + val.toLocaleString();
-            monthly.innerText = "UGX " + Math.round(val / 48).toLocaleString();
+        const range = document.getElementById('amountRange');
+        const displayAmount = document.getElementById('displayAmount');
+        const hiddenAmount = document.getElementById('hiddenAmount');
+        const monthlyPayment = document.getElementById('monthlyPayment');
+
+        range.addEventListener('input', function() {
+            const val = parseInt(this.value);
+            displayAmount.textContent = 'UGX ' + val.toLocaleString();
+            hiddenAmount.value = val;
+            
+            // Calculate monthly repayment figure
+            const monthly = Math.round((val * 1.15) / 12);
+            monthlyPayment.textContent = 'UGX ' + monthly.toLocaleString();
         });
     </script>
 </body>
