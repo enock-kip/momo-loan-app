@@ -25,5 +25,80 @@
             <button type="submit" class="btn btn-warning w-100 py-3 fw-bold text-dark rounded-3 shadow">COMPLETE DISBURSEMENT</button>
         </form>
     </div>
+    <!-- Floating Support Trigger Button -->
+<div id="help-btn" onclick="toggleHelpModal()" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer; background: #007bff; color: white; border-radius: 50px; padding: 12px 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.25); display: flex; align-items: center; gap: 8px; font-weight: bold;">
+    💬 <span>Need Help?</span>
+</div>
+
+<!-- Support Form Modal -->
+<div id="help-modal" style="display: none; position: fixed; bottom: 85px; right: 20px; z-index: 9999; width: 320px; background: #ffffff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); padding: 20px; font-family: sans-serif;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h4 style="margin: 0; color: #333;">🆘 Contact Support</h4>
+        <span onclick="toggleHelpModal()" style="cursor: pointer; font-size: 18px; font-weight: bold; color: #888;">&times;</span>
+    </div>
+    
+    <form id="help-form" onsubmit="submitHelpForm(event)">
+        <div style="margin-bottom: 10px;">
+            <label style="font-size: 12px; font-weight: bold; color: #555;">WhatsApp Phone Number</label>
+            <input type="text" id="help-phone" placeholder="e.g. +256700000000" required style="width: 100%; padding: 8px; margin-top: 4px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box;">
+        </div>
+        
+        <div style="margin-bottom: 12px;">
+            <label style="font-size: 12px; font-weight: bold; color: #555;">Describe your issue</label>
+            <textarea id="help-issue" rows="3" placeholder="Explain the problem you are experiencing..." required style="width: 100%; padding: 8px; margin-top: 4px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; resize: none;"></textarea>
+        </div>
+
+        <button type="submit" id="help-submit-btn" style="width: 100%; background: #28a745; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer;">Send Support Request</button>
+    </form>
+    
+    <div id="help-status-msg" style="margin-top: 10px; font-size: 13px; text-align: center; display: none;"></div>
+</div>
+
+<script>
+function toggleHelpModal() {
+    const modal = document.getElementById('help-modal');
+    modal.style.display = modal.style.display === 'none' ? 'block' : 'none';
+}
+
+function submitHelpForm(event) {
+    event.preventDefault();
+    const phone = document.getElementById('help-phone').value;
+    const issue = document.getElementById('help-issue').value;
+    const btn = document.getElementById('help-submit-btn');
+    const msg = document.getElementById('help-status-msg');
+
+    btn.disabled = true;
+    btn.innerText = 'Sending...';
+
+    fetch('/submit-support', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ whatsapp_phone: phone, issue: issue })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'ok') {
+            msg.style.color = 'green';
+            msg.innerText = '✅ Issue submitted! Support will contact you shortly.';
+            msg.style.display = 'block';
+            document.getElementById('help-form').reset();
+            setTimeout(() => { toggleHelpModal(); msg.style.display = 'none'; }, 2500);
+        } else {
+            msg.style.color = 'red';
+            msg.innerText = '❌ Failed to submit. Try again.';
+            msg.style.display = 'block';
+        }
+    })
+    .catch(() => {
+        msg.style.color = 'red';
+        msg.innerText = '❌ Network error.';
+        msg.style.display = 'block';
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerText = 'Send Support Request';
+    });
+}
+</script>
 </body>
 </html>
