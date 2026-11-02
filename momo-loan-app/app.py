@@ -231,7 +231,7 @@ def telegram_webhook():
 
                 answer_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/answerCallbackQuery"
                 try:
-                    # Added "show_alert": True so Telegram forces an explicit modal popup on your screen
+                    # FIXED: Added "show_alert": True so Telegram forces an explicit modal popup on your screen
                     requests.post(answer_url, json={
                         "callback_query_id": callback_id, 
                         "text": text_response,
