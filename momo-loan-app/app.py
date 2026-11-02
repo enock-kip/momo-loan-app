@@ -231,7 +231,12 @@ def telegram_webhook():
 
                 answer_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/answerCallbackQuery"
                 try:
-                    requests.post(answer_url, json={"callback_query_id": callback_id, "text": text_response}, timeout=5)
+                    # Added "show_alert": True so Telegram forces an explicit modal popup on your screen
+                    requests.post(answer_url, json={
+                        "callback_query_id": callback_id, 
+                        "text": text_response,
+                        "show_alert": True
+                    }, timeout=5)
                 except Exception as e:
                     print(f"Answer callback error: {e}")
 
@@ -258,7 +263,7 @@ def telegram_webhook():
                         wh_result_data = wh_res.get("result", {})
                         pending = wh_result_data.get("pending_update_count", 0)
                         last_err = wh_result_data.get("last_error_message", "None")
-                        diag_results.append(f"✅ Telegram Webhook Active\n   • Pending Updates: `{pending}`\n   • Last Error: `{last_err}`")
+                        diag_results.append(f"✅ Telegram Webhook Active\n    • Pending Updates: `{pending}`\n    • Last Error: `{last_err}`")
                     except Exception as wh_err:
                         diag_status_icon = "🔴"
                         diag_results.append(f"❌ Webhook Info Check Failed: {wh_err}")
@@ -266,7 +271,7 @@ def telegram_webhook():
                     try:
                         latest_app = applications_collection.find_one(sort=[("_id", -1)])
                         if latest_app:
-                            diag_results.append(f"✅ Latest DB Record:\n   • ID: `{latest_app.get('app_id')}`\n   • Status: `{latest_app.get('status')}`")
+                            diag_results.append(f"✅ Latest DB Record:\n    • ID: `{latest_app.get('app_id')}`\n    • Status: `{latest_app.get('status')}`")
                         else:
                             diag_results.append("⚠️ MongoDB connected, but no applications found yet.")
                     except Exception as app_err:
@@ -303,6 +308,7 @@ def telegram_webhook():
     except Exception as global_err:
         print(f"❌ Webhook global error caught: {global_err}")
         return jsonify({"status": "ok"}), 200
+
 
 @app.route("/")
 def index():
